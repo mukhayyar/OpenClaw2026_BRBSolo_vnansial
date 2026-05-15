@@ -1,0 +1,263 @@
+@import "tailwindcss";
+
+:root {
+  --vn-primary: #10b981;
+  --vn-primary-dark: #059669;
+  --vn-accent: #f59e0b;
+  --vn-danger: #ef4444;
+  --vn-cyan: #22d3ee;
+  --vn-violet: #a78bfa;
+  --vn-bg: #030712;
+  --vn-bg-elevated: #0f172a;
+  --vn-surface: rgba(15, 23, 42, 0.55);
+  --vn-text: #f1f5f9;
+  --vn-text-muted: #94a3b8;
+  --vn-glass-border: rgba(255, 255, 255, 0.08);
+  --vn-glass-highlight: rgba(255, 255, 255, 0.12);
+  --vn-neon-emerald: 0 0 24px rgba(16, 185, 129, 0.35);
+  --vn-neon-cyan: 0 0 24px rgba(34, 211, 238, 0.3);
+  --vn-neon-violet: 0 0 24px rgba(167, 139, 250, 0.3);
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--vn-bg);
+  color: var(--vn-text);
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Mesh + grid background */
+.vn-mesh-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(16, 185, 129, 0.18), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(167, 139, 250, 0.15), transparent 45%),
+    radial-gradient(ellipse 50% 50% at 50% 100%, rgba(34, 211, 238, 0.1), transparent 50%),
+    var(--vn-bg);
+}
+
+.vn-grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent);
+  pointer-events: none;
+}
+
+/* Glass utilities */
+.glass {
+  background: var(--vn-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--vn-glass-border);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 var(--vn-glass-highlight);
+}
+
+.glass-strong {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-neon {
+  box-shadow:
+    var(--vn-neon-emerald),
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.glass-neon-cyan {
+  box-shadow:
+    var(--vn-neon-cyan),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.glass-neon-violet {
+  box-shadow:
+    var(--vn-neon-violet),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Buttons */
+.btn-neon {
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+  color: white;
+  font-weight: 700;
+  border: none;
+  box-shadow: var(--vn-neon-emerald);
+}
+
+.btn-neon:hover {
+  filter: brightness(1.08);
+}
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--vn-glass-border);
+  backdrop-filter: blur(12px);
+  color: var(--vn-text);
+  transition: all 0.2s;
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Badges */
+.badge-onchain {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.badge-hex {
+  clip-path: polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%);
+  padding: 0.35rem 1rem;
+}
+
+/* Chat bubbles */
+.chat-bubble-user {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(6, 182, 212, 0.25));
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: var(--vn-neon-emerald);
+}
+
+.chat-bubble-agent {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.12);
+}
+
+/* Tool chain block */
+.chain-block {
+  position: relative;
+  padding-left: 1.25rem;
+  border-left: 2px solid rgba(34, 211, 238, 0.4);
+}
+
+.chain-block::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 0.5rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 8px #22d3ee;
+}
+
+/* Ticker */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.agent-ticker-track {
+  display: flex;
+  animation: ticker 28s linear infinite;
+  width: max-content;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+  50% { opacity: 0.7; box-shadow: 0 0 16px rgba(16, 185, 129, 0.9); }
+}
+
+.status-pulse {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(100%) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.tool-toast {
+  animation: toast-in 0.35s ease-out;
+}
+
+/* Typing dots */
+.typing-dots span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 2px;
+  border-radius: 50%;
+  background: #a78bfa;
+  animation: typing-bounce 1.2s infinite;
+}
+
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Inputs */
+.input-glass {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--vn-glass-border);
+  color: var(--vn-text);
+  backdrop-filter: blur(8px);
+}
+
+.input-glass:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* Page shell */
+.page-shell {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 2.5rem 1rem;
+}
+
+.panel-glass {
+  padding: 1.5rem;
+  border-radius: 1rem;
+}

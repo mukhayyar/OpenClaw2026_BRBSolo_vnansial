@@ -1,0 +1,36 @@
+# OpenClaw Submission & Repo
+Status: partial
+Last updated: 2026-05-15
+
+## Goal
+Meet OpenClaw Agenthon 2026 submission requirements: correct repo name, Devpost, demo video, remote URL.
+
+## Acceptance criteria
+- [x] Git remote `origin` → `git@github.com:mukhayyar/OpenClaw2026_BRBSolo_vnansial.git`
+- [ ] Push all hackathon work to origin (user action)
+- [ ] Devpost submission URL filled in README
+- [ ] Live demo URL filled in README
+- [ ] 2-min demo video recorded
+
+## Files touched / to create
+- `.git/config` (remote origin)
+- `README.md` — clone URL, team BRB Solo, submission table
+- `presentation.md` — repo CTA
+
+## Implementation notes
+- **Before remote:** `https://github.com/mukhayyar/vnansial` (fetch/push)
+- **After remote:** `git@github.com:mukhayyar/OpenClaw2026_BRBSolo_vnansial.git`
+- Team name in docs: **BRB Solo**
+- Do not force-push unless user explicitly requests
+
+## How to verify
+```bash
+cd /Users/mukhayyar/Projects/vnansial
+git remote -v
+# should show OpenClaw2026_BRBSolo_vnansial.git
+```
+
+## Handoff for next AI
+1. User runs `git push -u origin main` (or current branch) after reviewing uncommitted changes.
+2. Add Devpost URL and deployed demo URL to README Submission section.
+3. Record demo: autonomous agent + `/asisten` + glass UI.

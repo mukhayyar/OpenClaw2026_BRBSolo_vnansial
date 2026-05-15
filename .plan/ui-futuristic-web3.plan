@@ -1,0 +1,37 @@
+# Futuristic UI — Glass & Web3
+Status: done
+Last updated: 2026-05-15
+
+## Goal
+Futuristic glassmorphism + Web3 aesthetic; prominent AI chat; floating widget; tool toasts.
+
+## Acceptance criteria
+- [x] CSS variables, `.glass`, `.glass-strong`, mesh/grid backgrounds
+- [x] Glass nav, agent ticker, mock wallet modal
+- [x] ChatUI with glow bubbles, typing indicator, chain-style tool feed
+- [x] Tool toasts ("Tool executed: …")
+- [x] Floating FAB chat on all pages (hidden on `/asisten`)
+- [x] Landing hero/stats glass styling (partial — see Landing.tsx)
+- [x] Build passes
+
+## Files touched / to create
+- `src/index.css`
+- `src/components/Layout.tsx`, `AgentTicker.tsx`, `WalletModal.tsx`, `ToolToastStack.tsx`, `FloatingChat.tsx`, `ChatUI.tsx`, `PageShell.tsx`
+- `src/lib/chatApi.ts`
+- `src/pages/AsistenAI.tsx`
+
+## Implementation notes
+- No real wallet SDK — `WalletModal` explains coming soon
+- Tool events: `window.dispatchEvent('vn-tool', { detail: { name } })`
+- Key classes: `glass`, `glass-strong`, `glass-neon`, `chat-bubble-user`, `chat-bubble-agent`, `chain-block`, `btn-neon`, `badge-onchain`, `vn-mesh-bg`, `vn-grid-overlay`
+
+## How to verify
+```bash
+npm run dev
+# Open http://localhost:5173 — mesh bg, ticker, FAB chat, /asisten glass chat
+npm run build
+```
+
+## Handoff for next AI
+- Apply `PageShell` / `GlassPanel` to CekInvestasi, Edukasi, Kalkulator for full consistency
+- Wire `/agen` page when multi-agent UI lands
