@@ -13,6 +13,7 @@ const navItems = [
   { path: '/portofolio', label: 'Portofolio' },
   { path: '/edukasi', label: 'Edukasi' },
   { path: '/lapor', label: 'Lapor' },
+  { path: '/settings', label: 'Settings' },
 ]
 
 export default function Layout() {

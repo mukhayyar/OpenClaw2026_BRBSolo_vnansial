@@ -90,7 +90,7 @@ export default function CryptoWatch() {
       .finally(() => setRiskLoading(false))
   }, [selected])
 
-  const tone = risk ? riskTone(risk.risk.score) : null
+  const tone = risk && risk.coin && risk.risk?.score != null ? riskTone(risk.risk.score) : null
 
   return (
     <PageShell
@@ -154,9 +154,21 @@ export default function CryptoWatch() {
           </div>
         </Bento>
 
-        <Bento padding="lg" className="lg:col-span-2" tone={risk && risk.risk.score >= 70 ? 'ink' : 'cream'}>
-          {riskLoading && <p className={risk?.risk.score && risk.risk.score >= 70 ? 'text-white' : 'text-[var(--vn-muted)]'}>Menilai…</p>}
-          {risk && !risk.coin?.error && (
+        <Bento padding="lg" className="lg:col-span-2" tone={risk && risk.coin && risk.risk?.score >= 70 ? 'ink' : 'cream'}>
+          {riskLoading && <p className="text-[var(--vn-muted)]">Menilai…</p>}
+          {!riskLoading && risk && (risk as any).error && (
+            <div className="text-[14px] text-[var(--vn-ink-soft)]">
+              <p className="vn-eyebrow mb-2">Penilaian belum tersedia</p>
+              <p className="leading-relaxed">
+                CoinGecko sedang membatasi akses ({(risk as any).status || 'error'}).
+                Coba lagi beberapa menit, atau pilih koin lain. Daftar harga di samping tetap aktif.
+              </p>
+              <p className="text-[12px] text-[var(--vn-muted)] mt-3">
+                Tetap waspada: koin baru / kapitalisasi kecil / volume rendah selalu lebih berisiko.
+              </p>
+            </div>
+          )}
+          {!riskLoading && risk && risk.coin && !(risk as any).error && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} key={risk.coin.id}>
               <p className={`vn-eyebrow mb-2 ${risk.risk.score >= 70 ? '!text-[var(--vn-mint)]' : ''}`}>Risk score</p>
               <h2 className={`vn-display text-[40px] sm:text-[56px] mb-1 ${risk.risk.score >= 70 ? 'text-white' : 'text-[var(--vn-forest-dark)]'}`}>

@@ -221,7 +221,19 @@ export function scoreCoinRisk(coin) {
 
 export async function assessCryptoRisk(id) {
   const coin = await getCoinDetail(id)
-  if (coin.error) return coin
+  if (coin.error) {
+    // Stable shape so UI never crashes — partial info from FALLBACK_TOP if known
+    const fb = FALLBACK_TOP.find(c => c.id === String(id).toLowerCase())
+    if (fb) {
+      return {
+        coin: { id: fb.id, name: fb.name, symbol: fb.symbol, price: fb.price, image: fb.image, change30d: fb.change30d, marketCap: fb.marketCap, volume24h: fb.volume24h, homepage: [], genesisDate: null },
+        risk: scoreCoinRisk({ ...fb, homepage: ['https://example.com'], genesisDate: '2010-01-01' }),
+        source: 'fallback',
+        hint: coin.error,
+      }
+    }
+    return { error: coin.error, status: coin.status, coin: null, risk: null }
+  }
   return { coin, risk: scoreCoinRisk(coin) }
 }
 
