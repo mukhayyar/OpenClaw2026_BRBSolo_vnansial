@@ -10,7 +10,9 @@
     "dev:server": "node --watch server/index.js",
     "build": "vite build",
     "start": "node server/index.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -30,6 +32,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
-    "vite": "^8.0.8"
+    "vite": "^8.0.8",
+    "vitest": "^3.2.4"
   }
 }
