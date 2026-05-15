@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ChatMessage, ToolLog } from '../lib/chatApi'
 import TradingChart from './TradingChart'
+import { renderMarkdown } from '../lib/markdown'
 
 const TOOL_LABELS: Record<string, string> = {
   check_investment_company: 'Cek izin OJK',
@@ -241,16 +242,11 @@ export default function ChatUI({
 
 function AssistantContent({ content }: { content: string }) {
   const parts = useMemo(() => splitChartMarkers(content), [content])
-  if (parts.length === 1 && parts[0].type === 'text') {
-    return <span className="text-[14.5px] leading-relaxed whitespace-pre-wrap">{parts[0].value}</span>
-  }
   return (
     <div className="space-y-3">
       {parts.map((p, i) =>
         p.type === 'text' ? (
-          <span key={i} className="text-[14.5px] leading-relaxed whitespace-pre-wrap block">
-            {p.value}
-          </span>
+          <div key={i}>{renderMarkdown(p.value)}</div>
         ) : (
           <div key={i} className="not-prose">
             <TradingChart kind={p.kind} symbol={p.symbol} range={p.range as any} height={180} showAxis={false} />

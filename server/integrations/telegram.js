@@ -17,7 +17,7 @@
  * Polling loop & graceful shutdown built in.
  */
 
-import { ensureUser, listHealthSnapshots, listHoldings, listSessions, getSession, listMessages, listAlerts, saveSettings, getSettings } from '../lib/db.js'
+import { ensureUser, listHealthSnapshots, listHoldings, listSessions, getSession, listMessages, listAlerts, saveSettings, getSettings, listReminders } from '../lib/db.js'
 import { getQuote } from '../lib/yahoo.js'
 import { getCompanyProfile } from '../lib/idx.js'
 import { assessCryptoRisk, getCoinDetail } from '../lib/coingecko.js'
@@ -61,11 +61,14 @@ Perintah:
 \`/emiten KODE\` — info perusahaan IDX
 \`/ask <pertanyaan>\` — tanya bebas ke asisten AI
 \`/sessions\` — daftar sesi chat dari web
-\`/continue NUM\` — lanjutkan sesi web di Telegram (pakai konteks 5 pesan terakhir)
+\`/continue NUM\` — lanjutkan sesi web (pakai 5 pesan terakhir)
 \`/alerts\` — daftar price alert aktif
-\`/bind\` — bind chat ini ke akun web (PIN diatur server-side)
+\`/reminders\` — daftar pengingat aktif
+\`/bind\` — bind chat ini ke akun web
 
-Buka aplikasi web untuk fitur lengkap.`
+Atau langsung ketik pertanyaan biasa (tanpa command) — saya akan
+balas dengan Markdown formatting. Bisa minta: _ingatkan saya bayar
+tagihan 30 menit lagi_, _alert kalau BBCA di atas 8000_, dll.`
 
 async function handleCommand(message) {
   const chatId = message.chat.id
@@ -167,6 +170,13 @@ async function handleCommand(message) {
       if (!alerts.length) return reply(chatId, 'Belum ada alert aktif. Buat via asisten AI: "Buat alert kalau BBCA di atas 10000".')
       const lines = alerts.map(a => `#${a.id} ${a.kind.toUpperCase()} ${a.symbol} ${a.condition} ${a.target}`).join('\n')
       await reply(chatId, `*Alert aktif:*\n${lines}`)
+      return
+    }
+    if (cmd === '/reminders' || cmd === '/remind') {
+      const rems = listReminders(user.id, false)
+      if (!rems.length) return reply(chatId, 'Belum ada reminder. Tanya asisten: "Ingatkan saya bayar tagihan 5 menit lagi".')
+      const lines = rems.slice(0, 15).map(r => `#${r.id} _${new Date(r.fire_at).toLocaleString('id-ID')}_ — ${r.message}`).join('\n')
+      await reply(chatId, `*Reminder aktif:*\n${lines}`)
       return
     }
     // Fallback: treat as /ask, with pending /continue context if any

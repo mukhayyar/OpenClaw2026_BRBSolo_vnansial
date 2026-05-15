@@ -122,6 +122,17 @@ async function tryLoadSqlite() {
       CREATE INDEX IF NOT EXISTS idx_message_session ON message(session_id, id);
       CREATE INDEX IF NOT EXISTS idx_agent_user ON agent(user_id);
       CREATE INDEX IF NOT EXISTS idx_alert_user ON alert(user_id, active);
+      CREATE TABLE IF NOT EXISTS reminder (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        message TEXT NOT NULL,
+        fire_at INTEGER NOT NULL,
+        channel TEXT NOT NULL DEFAULT 'telegram',
+        fired_at INTEGER,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_reminder_pending ON reminder(fire_at, fired_at);
     `)
     return true
   } catch (err) {
@@ -468,6 +479,64 @@ export function deleteAlert(id) {
   if (driver === 'sqlite') db.prepare('DELETE FROM alert WHERE id = ?').run(id)
   else {
     const m = mem.get('alert')
+    if (m) m.delete(Number(id))
+  }
+  return true
+}
+
+export function markAlertFired(id) {
+  if (driver === 'sqlite') db.prepare('UPDATE alert SET last_fired_at = ? WHERE id = ?').run(Date.now(), id)
+  else {
+    const m = mem.get('alert')
+    if (m) for (const v of m.values()) if (v.id === Number(id)) v.last_fired_at = Date.now()
+  }
+}
+
+// Reminders -------------------------------------------------------
+export function createReminder({ userId, message, fireAt, channel = 'telegram' }) {
+  const t = now()
+  if (driver === 'sqlite') {
+    const info = db
+      .prepare('INSERT INTO reminder (user_id, message, fire_at, channel, created_at) VALUES (?, ?, ?, ?, ?)')
+      .run(userId, message, fireAt, channel, t)
+    return db.prepare('SELECT * FROM reminder WHERE id = ?').get(info.lastInsertRowid)
+  }
+  return memInsert('reminder', { user_id: userId, message, fire_at: fireAt, channel, fired_at: null, created_at: t })
+}
+
+export function listReminders(userId, includeFired = false) {
+  if (driver === 'sqlite') {
+    const q = includeFired
+      ? 'SELECT * FROM reminder WHERE user_id = ? ORDER BY fire_at DESC LIMIT 50'
+      : 'SELECT * FROM reminder WHERE user_id = ? AND fired_at IS NULL ORDER BY fire_at'
+    return db.prepare(q).all(userId)
+  }
+  return memList('reminder')
+    .filter(r => r.user_id === userId && (includeFired || !r.fired_at))
+    .sort((a, b) => a.fire_at - b.fire_at)
+}
+
+export function listDueReminders(beforeMs = Date.now()) {
+  if (driver === 'sqlite') {
+    return db
+      .prepare('SELECT * FROM reminder WHERE fired_at IS NULL AND fire_at <= ?')
+      .all(beforeMs)
+  }
+  return memList('reminder').filter(r => !r.fired_at && r.fire_at <= beforeMs)
+}
+
+export function markReminderFired(id) {
+  if (driver === 'sqlite') db.prepare('UPDATE reminder SET fired_at = ? WHERE id = ?').run(Date.now(), id)
+  else {
+    const m = mem.get('reminder')
+    if (m) for (const v of m.values()) if (v.id === Number(id)) v.fired_at = Date.now()
+  }
+}
+
+export function deleteReminder(id) {
+  if (driver === 'sqlite') db.prepare('DELETE FROM reminder WHERE id = ?').run(id)
+  else {
+    const m = mem.get('reminder')
     if (m) m.delete(Number(id))
   }
   return true

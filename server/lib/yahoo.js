@@ -41,15 +41,25 @@ function mockQuote(symbol) {
   }
 }
 
-let yfModule = null
+let yfInstance = null
 
 async function getYahoo() {
   if (process.env.YAHOO_MOCK === '1') return null
-  if (!yfModule) {
+  if (!yfInstance) {
     const mod = await import('yahoo-finance2')
-    yfModule = mod.default || mod
+    const YahooFinance = mod.default || mod
+    // v2.14+ requires instantiation. Older versions exported a ready instance.
+    try {
+      yfInstance = typeof YahooFinance === 'function' ? new YahooFinance() : YahooFinance
+    } catch {
+      yfInstance = YahooFinance
+    }
+    // Suppress upstream notices that flood logs
+    try {
+      yfInstance.suppressNotices?.(['yahooSurvey'])
+    } catch {}
   }
-  return yfModule
+  return yfInstance
 }
 
 export function normalizeSymbol(symbol) {
@@ -166,19 +176,38 @@ export async function getHistorical(symbol, range = '3mo') {
     else if (range === '1y') period1.setFullYear(period1.getFullYear() - 1)
     else period1.setMonth(period1.getMonth() - 3)
 
-    const rows = await yf.historical(sym, {
-      period1,
-      period2,
-      interval: '1d',
-    })
-    const points = (rows || []).map(r => ({
-      date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date),
-      close: r.close,
-      open: r.open,
-      high: r.high,
-      low: r.low,
-      volume: r.volume,
-    }))
+    // yahoo-finance2 v2.x: historical() was removed; use chart().
+    // Fall back to historical() for older installs if available.
+    let rawRows = []
+    if (typeof yf.chart === 'function') {
+      const result = await yf.chart(sym, {
+        period1,
+        period2,
+        interval: '1d',
+      })
+      rawRows = (result?.quotes || []).map(r => ({
+        date: r.date,
+        open: r.open,
+        high: r.high,
+        low: r.low,
+        close: r.close ?? r.adjclose,
+        volume: r.volume,
+      }))
+    } else if (typeof yf.historical === 'function') {
+      rawRows = await yf.historical(sym, { period1, period2, interval: '1d' })
+    } else {
+      return { error: 'yahoo-finance2 has no chart() or historical() — update the dependency', symbol: sym, points: [] }
+    }
+    const points = (rawRows || [])
+      .filter(r => r && r.date != null && r.close != null)
+      .map(r => ({
+        date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date),
+        close: r.close,
+        open: r.open,
+        high: r.high,
+        low: r.low,
+        volume: r.volume,
+      }))
     const data = {
       symbol: sym,
       range,

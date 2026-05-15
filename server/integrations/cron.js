@@ -1,21 +1,26 @@
 /**
- * Cron daemon for price alerts.
+ * Cron daemon.
  *
- * Every minute we iterate active alerts in SQLite, fetch the current
- * price for each symbol (Yahoo for saham, CoinGecko for crypto), and
- * if the condition is met:
- *  1. Notify the user's Telegram chat (if telegram_chat_id is set in settings)
- *  2. Update last_fired_at so we don't spam-fire on every tick
+ * Polls every 30 s and dispatches:
+ *  1. Price alerts (saham / crypto crossing target) → Telegram + cooldown
+ *  2. Reminders due now → Telegram, mark fired
  *
- * Uses `node-cron` if installed; falls back to setInterval otherwise.
+ * Iterates every user that has an entry in `settings` (assumes self-host
+ * 1–N user scale, not thousands).
  */
 
-import { listAlerts, getSettings, deleteAlert } from '../lib/db.js'
-import { getQuote } from './../lib/yahoo.js'
-import { getCoinDetail } from './../lib/coingecko.js'
+import {
+  listAlerts,
+  getSettings,
+  listDueReminders,
+  markReminderFired,
+  markAlertFired,
+} from '../lib/db.js'
+import { getQuote } from '../lib/yahoo.js'
+import { getCoinDetail } from '../lib/coingecko.js'
 
-const POLL_INTERVAL_MS = 60_000 // 1 min
-const COOLDOWN_MS = 60 * 60 * 1000 // re-fire at most once per hour
+const POLL_INTERVAL_MS = 30_000
+const COOLDOWN_MS = 60 * 60 * 1000
 let started = false
 let timer = null
 
@@ -36,51 +41,28 @@ async function notifyTelegram(chatId, text) {
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token || !chatId) return false
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         text,
         parse_mode: 'Markdown',
+        disable_web_page_preview: true,
       }),
     })
-    return true
+    return res.ok
   } catch {
     return false
   }
 }
 
-// Lazy import so the rest of the app works without sqlite update helpers
-async function markFired(alertId) {
-  const { default: dbMod } = await import('../lib/db.js').then(m => ({ default: m }))
-  // updateAlertFired uses the existing sqlite handle; expose a helper if it
-  // doesn't exist yet — for now we just delete after firing to keep things simple.
-  // Better: keep the alert but stamp `last_fired_at` and respect COOLDOWN_MS.
-  // We add the helper inline here.
-  try {
-    const drv = dbMod.getDriver?.()
-    if (drv === 'sqlite' && dbMod._stmt) {
-      dbMod._stmt('UPDATE alert SET last_fired_at = ? WHERE id = ?').run(Date.now(), alertId)
-    }
-  } catch {}
-}
-
 async function tick() {
-  // Get all distinct users with active alerts
-  // For self-host single-user we just look at user 1.
-  // Better: iterate all users; for now we grab all alerts across all users.
   try {
-    // We don't have a "list all users" helper exposed; in the single-user
-    // self-host case, user id 1 is the owner. Fallback gracefully.
-    const allAlerts = []
-    for (let userId = 1; userId <= 5; userId++) {
+    // Step 1: alerts (iterate likely user ids — self-host scale)
+    for (let userId = 1; userId <= 10; userId++) {
       const rows = listAlerts(userId, true)
-      if (rows.length) allAlerts.push({ userId, rows })
-    }
-    if (!allAlerts.length) return
-
-    for (const { userId, rows } of allAlerts) {
+      if (!rows.length) continue
       const settings = getSettings(userId)
       const chatId = settings?.telegram_chat_id
       for (const a of rows) {
@@ -91,11 +73,29 @@ async function tick() {
           (a.condition === 'above' && price > a.target) ||
           (a.condition === 'below' && price < a.target)
         if (!triggered) continue
-        const msg = `🔔 *Alert Vnansial*\n${a.kind.toUpperCase()} *${a.symbol}* ${a.condition} ${a.target}.\nHarga sekarang: *${price}*`
+        const msg =
+          `🔔 *Alert Vnansial*\n` +
+          `${a.kind === 'crypto' ? '🪙' : '📈'} *${a.symbol}* ${a.condition === 'above' ? 'di atas' : 'di bawah'} ${a.target}\n` +
+          `Harga sekarang: *${price.toLocaleString('id-ID')}*`
         const sent = await notifyTelegram(chatId, msg)
         console.log(`[cron] alert #${a.id} fired (telegram=${sent})`)
-        await markFired(a.id)
+        markAlertFired(a.id)
       }
+    }
+
+    // Step 2: reminders due now
+    const due = listDueReminders(Date.now())
+    for (const r of due) {
+      const settings = getSettings(r.user_id)
+      const chatId = settings?.telegram_chat_id
+      const body = `⏰ *Pengingat dari Vnansial*\n${r.message}`
+      if (r.channel === 'telegram') {
+        const sent = await notifyTelegram(chatId, body)
+        console.log(`[cron] reminder #${r.id} sent via telegram=${sent}`)
+      } else {
+        console.log(`[cron] reminder #${r.id} marked for in-app delivery`)
+      }
+      markReminderFired(r.id)
     }
   } catch (err) {
     console.error('[cron] tick error', err.message)
@@ -105,10 +105,9 @@ async function tick() {
 export function startCron() {
   if (started) return
   started = true
-  console.log(`[cron] alert poller starting (every ${POLL_INTERVAL_MS / 1000}s)`)
+  console.log(`[cron] daemon starting (poll every ${POLL_INTERVAL_MS / 1000}s)`)
   timer = setInterval(tick, POLL_INTERVAL_MS)
-  // First run after 5 s
-  setTimeout(tick, 5_000)
+  setTimeout(tick, 3_000)
 }
 
 export function stopCron() {

@@ -505,4 +505,52 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'create_reminder',
+      description:
+        'Jadwalkan pengingat (notifikasi via Telegram saat waktunya tiba). Wajib PIN. Pilih salah satu cara penentuan waktu: minutesFromNow, secondsFromNow, fireAtMs (unix ms), atau fireAtISO. Contoh: user bilang "ingatkan saya bayar tagihan 5 menit lagi" → minutesFromNow=5, message="Bayar tagihan".',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          message: { type: 'string', description: 'Pesan reminder' },
+          minutesFromNow: { type: 'number' },
+          secondsFromNow: { type: 'number' },
+          fireAtISO: { type: 'string', description: 'ISO timestamp eg 2026-05-15T20:00:00+07:00' },
+          fireAtMs: { type: 'number' },
+          channel: { type: 'string', enum: ['telegram', 'app'], description: 'Default telegram' },
+        },
+        required: ['pin', 'message'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_reminders',
+      description: 'Daftar reminder user (default hanya yang belum terkirim). Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          includeFired: { type: 'boolean' },
+        },
+        required: ['pin'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_reminder',
+      description: 'Hapus reminder berdasarkan id. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' }, id: { type: 'integer' } },
+        required: ['pin', 'id'],
+      },
+    },
+  },
 ]

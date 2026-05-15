@@ -36,6 +36,7 @@ import { renderChart } from './charts.js'
 import { createPriceAlert, listUserAlerts, deleteUserAlert } from './alerts.js'
 import { askOtherAgent } from './delegate.js'
 import { assessDexToken, searchDex } from '../lib/dexscreener.js'
+import { createUserReminder, listUserReminders, deleteUserReminder } from './reminders.js'
 
 export async function runTool(name, args) {
   switch (name) {
@@ -105,6 +106,12 @@ export async function runTool(name, args) {
       return searchDex(args?.query)
     case 'assess_dex_token':
       return assessDexToken(args)
+    case 'create_reminder':
+      return createUserReminder(args)
+    case 'list_reminders':
+      return listUserReminders(args)
+    case 'delete_reminder':
+      return deleteUserReminder(args)
     default:
       return { error: `Unknown tool: ${name}` }
   }
