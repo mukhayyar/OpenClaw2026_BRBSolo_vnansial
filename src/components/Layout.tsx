@@ -10,6 +10,7 @@ const navItems = [
   { path: '/emiten', label: 'Saham IDX' },
   { path: '/crypto', label: 'Crypto' },
   { path: '/asuransi', label: 'Asuransi' },
+  { path: '/komoditas', label: 'Komoditas' },
   { path: '/portofolio', label: 'Portofolio' },
   { path: '/edukasi', label: 'Edukasi' },
   { path: '/lapor', label: 'Lapor' },

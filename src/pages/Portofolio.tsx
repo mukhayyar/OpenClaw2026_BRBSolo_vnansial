@@ -44,6 +44,27 @@ type CashflowEntry = {
   note?: string
 }
 
+type Debt = {
+  id: string
+  name: string
+  kind: string
+  principal: number
+  remaining: number
+  monthlyPayment?: number
+  annualRate?: number
+}
+
+type CashflowRule = {
+  id: number
+  kind: 'income' | 'expense'
+  category: string
+  amount: number
+  schedule: 'daily' | 'weekly' | 'monthly'
+  day_of_month?: number
+  active: number
+  next_fire_at: number
+}
+
 const KIND_LABEL: Record<AssetKind, string> = {
   saham: 'Saham',
   crypto: 'Crypto',
@@ -84,6 +105,7 @@ type State = {
   buffers: Buffer[]
   tujuan: Tujuan[]
   cashflow: CashflowEntry[]
+  debts: Debt[]
 }
 
 const DEFAULT: State = {
@@ -94,6 +116,7 @@ const DEFAULT: State = {
   ],
   tujuan: [],
   cashflow: [],
+  debts: [],
 }
 
 export default function Portofolio() {
@@ -126,6 +149,8 @@ function PortofolioBody() {
   })
   const [syncing, setSyncing] = useState(false)
   const [livePrices, setLivePrices] = useState<Record<string, { price: number; currency: string }>>({})
+  const [serverDebts, setServerDebts] = useState<any[]>([])
+  const [serverRules, setServerRules] = useState<CashflowRule[]>([])
 
   // Pull holdings/buffers from server when PIN is set
   useEffect(() => {
@@ -150,7 +175,30 @@ function PortofolioBody() {
         }
       })
       .catch(() => {})
+
+    // Debts
+    fetch(`${API}/api/me/debts`, { headers: pinHeader() })
+      .then(r => r.json())
+      .then(d => setServerDebts(d.debts || []))
+      .catch(() => {})
+
+    // Cashflow rules
+    fetch(`${API}/api/me/cashflow-rules`, { headers: pinHeader() })
+      .then(r => r.json())
+      .then(d => setServerRules(d.rules || []))
+      .catch(() => {})
   }, [])
+
+  async function refreshDebts() {
+    if (!getPin()) return
+    const d = await fetch(`${API}/api/me/debts`, { headers: pinHeader() }).then(r => r.json())
+    setServerDebts(d.debts || [])
+  }
+  async function refreshRules() {
+    if (!getPin()) return
+    const d = await fetch(`${API}/api/me/cashflow-rules`, { headers: pinHeader() }).then(r => r.json())
+    setServerRules(d.rules || [])
+  }
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
@@ -283,6 +331,15 @@ function PortofolioBody() {
     [state.tujuan],
   )
 
+  const totalDebt = useMemo(
+    () => serverDebts.reduce((sum, d) => sum + Number(d.remaining || 0), 0),
+    [serverDebts],
+  )
+  const totalDebtMonthly = useMemo(
+    () => serverDebts.reduce((sum, d) => sum + Number(d.monthly_payment || 0), 0),
+    [serverDebts],
+  )
+
   const monthlyCashflow = useMemo(() => {
     const now = new Date()
     const month = now.toISOString().slice(0, 7)
@@ -328,9 +385,9 @@ function PortofolioBody() {
           </p>
         </Bento>
         <Bento padding="lg" tone="ink">
-          <p className="vn-eyebrow !text-[var(--vn-mint)] mb-2">Net worth (manual)</p>
-          <p className="vn-display text-[36px] text-white">{fmt(liveValue + totalBuffer + totalTujuan)}</p>
-          <p className="text-white/55 text-[12px] mt-1">Aset live + buffer + tujuan (belum minus hutang)</p>
+          <p className="vn-eyebrow !text-[var(--vn-mint)] mb-2">Net worth</p>
+          <p className="vn-display text-[36px] text-white">{fmt(liveValue + totalBuffer + totalTujuan - totalDebt)}</p>
+          <p className="text-white/55 text-[12px] mt-1">Aset live + buffer + tujuan − hutang</p>
         </Bento>
       </div>
 
@@ -475,14 +532,18 @@ function PortofolioBody() {
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mb-2">
-                  <label className="text-[11px]">
-                    Saldo
-                    <input type="number" value={t.amount || ''} onChange={e => updateTujuan(t.id, { amount: Number(e.target.value) })} className="vn-input mt-0.5 !py-1.5" />
-                  </label>
-                  <label className="text-[11px]">
-                    Target
-                    <input type="number" value={t.target || ''} onChange={e => updateTujuan(t.id, { target: Number(e.target.value) })} className="vn-input mt-0.5 !py-1.5" />
-                  </label>
+                  <div className="text-[11px]">
+                    <label>Saldo</label>
+                    <div className="mt-0.5">
+                      <MoneyInput value={t.amount || 0} onChange={v => updateTujuan(t.id, { amount: v })} />
+                    </div>
+                  </div>
+                  <div className="text-[11px]">
+                    <label>Target</label>
+                    <div className="mt-0.5">
+                      <MoneyInput value={t.target || 0} onChange={v => updateTujuan(t.id, { target: v })} />
+                    </div>
+                  </div>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--vn-bg-deep)] overflow-hidden mb-2">
                   <div
@@ -524,6 +585,12 @@ function PortofolioBody() {
         </div>
       </Bento>
 
+      {/* Hutang */}
+      <DebtSection debts={serverDebts} totalDebt={totalDebt} totalMonthly={totalDebtMonthly} onChange={refreshDebts} />
+
+      {/* Auto-cashflow rules */}
+      <CashflowRulesSection rules={serverRules} onChange={refreshRules} />
+
       {/* Cashflow */}
       <Bento padding="lg">
         <p className="vn-eyebrow mb-3">Cashflow bulanan</p>
@@ -564,6 +631,172 @@ function PortofolioBody() {
         </ul>
       </Bento>
     </>
+  )
+}
+
+/* ============================================================== */
+/* Debt section                                                     */
+/* ============================================================== */
+
+function DebtSection({
+  debts, totalDebt, totalMonthly, onChange,
+}: { debts: any[]; totalDebt: number; totalMonthly: number; onChange: () => void }) {
+  const [name, setName] = useState('')
+  const [kind, setKind] = useState('pinjaman')
+  const [principal, setPrincipal] = useState(0)
+  const [remaining, setRemaining] = useState(0)
+  const [monthlyPayment, setMonthlyPayment] = useState(0)
+
+  async function add() {
+    if (!getPin()) return alert('Unlock PIN dulu untuk simpan ke server.')
+    if (!name.trim() || !principal) return
+    await fetch(`${API}/api/me/debts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...pinHeader() },
+      body: JSON.stringify({ name, kind, principal, remaining: remaining || principal, monthlyPayment }),
+    })
+    setName(''); setPrincipal(0); setRemaining(0); setMonthlyPayment(0)
+    onChange()
+  }
+
+  async function remove(id: number) {
+    await fetch(`${API}/api/me/debts/${id}`, { method: 'DELETE', headers: pinHeader() })
+    onChange()
+  }
+
+  return (
+    <Bento padding="lg" className="mb-8">
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="vn-eyebrow">Hutang</p>
+        <p className="text-[12px] text-[var(--vn-muted)]">
+          Total sisa <strong className="text-[var(--vn-red)]">{fmt(totalDebt)}</strong> · cicilan/bln <strong>{fmt(totalMonthly)}</strong>
+        </p>
+      </div>
+      <h3 className="vn-headline text-[22px] mb-5">Liabilitas yang belum lunas.</h3>
+      <div className="grid sm:grid-cols-5 gap-2 items-end mb-5">
+        <input placeholder="Nama (KPR BCA, dll.)" value={name} onChange={e => setName(e.target.value)} className="vn-input" />
+        <select value={kind} onChange={e => setKind(e.target.value)} className="vn-input">
+          <option value="pinjaman">Pinjaman</option>
+          <option value="kpr">KPR</option>
+          <option value="kartu_kredit">Kartu Kredit</option>
+          <option value="pinjol">Pinjol</option>
+          <option value="kpa">KPA</option>
+        </select>
+        <MoneyInput value={principal} onChange={setPrincipal} placeholder="Pokok" />
+        <MoneyInput value={remaining} onChange={setRemaining} placeholder="Sisa" />
+        <MoneyInput value={monthlyPayment} onChange={setMonthlyPayment} placeholder="Cicilan/bln" />
+      </div>
+      <button onClick={add} className="vn-btn vn-btn-primary mb-5">Tambah hutang</button>
+
+      {debts.length === 0 ? (
+        <p className="text-[var(--vn-muted)] text-[14px]">Belum ada hutang tercatat.</p>
+      ) : (
+        <ul className="space-y-2">
+          {debts.map(d => (
+            <li key={d.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 bg-[var(--vn-bg-deep)] rounded-2xl px-4 py-3">
+              <div>
+                <p className="font-semibold text-[14px]">{d.name}</p>
+                <p className="text-[11px] text-[var(--vn-muted)]">{d.kind}</p>
+              </div>
+              <p className="text-[13px] text-[var(--vn-red)]">{fmt(d.remaining)}</p>
+              <p className="text-[12px] text-[var(--vn-muted)]">{d.monthly_payment ? `${fmt(d.monthly_payment)}/bln` : '—'}</p>
+              <button onClick={() => remove(d.id)} className="text-[12px] text-[var(--vn-red)] hover:underline">Hapus</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Bento>
+  )
+}
+
+/* ============================================================== */
+/* Auto-cashflow rules section                                      */
+/* ============================================================== */
+
+function CashflowRulesSection({ rules, onChange }: { rules: CashflowRule[]; onChange: () => void }) {
+  const [kind, setKind] = useState<'income' | 'expense'>('income')
+  const [category, setCategory] = useState('')
+  const [amount, setAmount] = useState(0)
+  const [schedule, setSchedule] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
+  const [dayOfMonth, setDayOfMonth] = useState(25)
+
+  async function add() {
+    if (!getPin()) return alert('Unlock PIN dulu.')
+    if (!category.trim() || !amount) return
+    await fetch(`${API}/api/me/cashflow-rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...pinHeader() },
+      body: JSON.stringify({ kind, category, amount, schedule, dayOfMonth }),
+    })
+    setCategory(''); setAmount(0)
+    onChange()
+  }
+  async function toggle(r: CashflowRule) {
+    await fetch(`${API}/api/me/cashflow-rules/${r.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...pinHeader() },
+      body: JSON.stringify({ active: !r.active }),
+    })
+    onChange()
+  }
+  async function remove(id: number) {
+    await fetch(`${API}/api/me/cashflow-rules/${id}`, { method: 'DELETE', headers: pinHeader() })
+    onChange()
+  }
+
+  return (
+    <Bento padding="lg" className="mb-8">
+      <p className="vn-eyebrow mb-3">Auto cashflow (rutin)</p>
+      <h3 className="vn-headline text-[22px] mb-2">Gaji, tagihan, cicilan otomatis tercatat.</h3>
+      <p className="text-[12.5px] text-[var(--vn-muted)] mb-5">
+        Cron daemon (setiap 30 detik) cek aturan ini dan kirim notifikasi Telegram saat jatuh tempo.
+        Cocok untuk: gaji bulanan, tagihan listrik, internet, langganan, cicilan.
+      </p>
+      <div className="grid sm:grid-cols-6 gap-2 items-end mb-5">
+        <select value={kind} onChange={e => setKind(e.target.value as any)} className="vn-input">
+          <option value="income">Pemasukan</option>
+          <option value="expense">Pengeluaran</option>
+        </select>
+        <input placeholder="Kategori (Gaji, Listrik)" value={category} onChange={e => setCategory(e.target.value)} className="vn-input sm:col-span-2" />
+        <MoneyInput value={amount} onChange={setAmount} placeholder="Nominal" />
+        <select value={schedule} onChange={e => setSchedule(e.target.value as any)} className="vn-input">
+          <option value="daily">Harian</option>
+          <option value="weekly">Mingguan</option>
+          <option value="monthly">Bulanan</option>
+        </select>
+        {schedule === 'monthly' && (
+          <input type="number" min={1} max={31} value={dayOfMonth} onChange={e => setDayOfMonth(Number(e.target.value))} className="vn-input" placeholder="Tgl" />
+        )}
+      </div>
+      <button onClick={add} className="vn-btn vn-btn-primary mb-5">Tambah aturan</button>
+
+      {rules.length === 0 ? (
+        <p className="text-[var(--vn-muted)] text-[14px]">Belum ada aturan otomatis.</p>
+      ) : (
+        <ul className="space-y-2">
+          {rules.map(r => (
+            <li key={r.id} className={`grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-3 rounded-2xl px-4 py-3 ${r.active ? 'bg-[var(--vn-bg-deep)]' : 'bg-[var(--vn-bg-deep)] opacity-50'}`}>
+              <span className={`text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full ${r.kind === 'income' ? 'bg-[var(--vn-cream)] text-[var(--vn-forest-dark)]' : 'bg-[var(--vn-red-soft)] text-[var(--vn-red)]'}`}>
+                {r.kind === 'income' ? 'IN' : 'OUT'}
+              </span>
+              <div>
+                <p className="text-[14px] font-medium">{r.category}</p>
+                <p className="text-[11px] text-[var(--vn-muted)]">
+                  {r.schedule} {r.day_of_month ? `· tgl ${r.day_of_month}` : ''} · {new Date(r.next_fire_at).toLocaleDateString('id-ID')}
+                </p>
+              </div>
+              <p className={`text-[13px] font-semibold font-mono ${r.kind === 'income' ? 'text-[var(--vn-forest-dark)]' : 'text-[var(--vn-red)]'}`}>
+                {r.kind === 'income' ? '+' : '−'}{fmt(r.amount)}
+              </p>
+              <button onClick={() => toggle(r)} className="text-[11px] underline text-[var(--vn-forest)]">
+                {r.active ? 'Pause' : 'Resume'}
+              </button>
+              <button onClick={() => remove(r.id)} className="text-[11px] text-[var(--vn-red)] hover:underline">Hapus</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Bento>
   )
 }
 
@@ -753,10 +986,12 @@ function TujuanForm({ onAdd }: { onAdd: (t: Omit<Tujuan, 'id'>) => void }) {
           ))}
         </select>
       </label>
-      <label className="text-[12px]">
-        Target (Rp)
-        <input type="number" value={target || ''} onChange={e => setTarget(Number(e.target.value))} className="vn-input mt-1" />
-      </label>
+      <div className="text-[12px]">
+        <label>Target</label>
+        <div className="mt-1">
+          <MoneyInput value={target} onChange={setTarget} />
+        </div>
+      </div>
       <button
         onClick={() => {
           if (!name.trim() || !target) return
@@ -800,10 +1035,12 @@ function CashflowForm({ onAdd }: { onAdd: (e: Omit<CashflowEntry, 'id'>) => void
         Kategori
         <input value={category} onChange={e => setCategory(e.target.value)} placeholder="Gaji, makan, transport…" className="vn-input mt-1" />
       </label>
-      <label className="text-[12px]">
-        Nominal
-        <input type="number" value={amount || ''} onChange={e => setAmount(Number(e.target.value))} className="vn-input mt-1" />
-      </label>
+      <div className="text-[12px]">
+        <label>Nominal</label>
+        <div className="mt-1">
+          <MoneyInput value={amount} onChange={setAmount} />
+        </div>
+      </div>
       <label className="text-[12px]">
         Catatan
         <input value={note} onChange={e => setNote(e.target.value)} className="vn-input mt-1" />

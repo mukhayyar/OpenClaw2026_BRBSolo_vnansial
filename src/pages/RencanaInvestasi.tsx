@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
+import MoneyInput from '../components/MoneyInput'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -148,18 +149,22 @@ export default function RencanaInvestasi() {
           <p className="vn-eyebrow mb-3">Perencana tujuan</p>
           <h3 className="vn-headline text-[22px] mb-5">Target tabungan kamu.</h3>
           <div className="space-y-4">
-            <label className="block text-[13px] text-[var(--vn-ink-soft)]">
-              Target (Rp)
-              <input type="number" value={target} onChange={e => setTarget(Number(e.target.value))} className="vn-input mt-1" />
-            </label>
+            <div className="block text-[13px] text-[var(--vn-ink-soft)]">
+              <label>Target</label>
+              <div className="mt-1">
+                <MoneyInput value={target} onChange={setTarget} />
+              </div>
+            </div>
             <label className="block text-[13px] text-[var(--vn-ink-soft)]">
               Tenor (bulan)
               <input type="number" value={months} onChange={e => setMonths(Number(e.target.value))} className="vn-input mt-1" />
             </label>
-            <label className="block text-[13px] text-[var(--vn-ink-soft)]">
-              Iuran bulanan (Rp)
-              <input type="number" value={monthly} onChange={e => setMonthly(Number(e.target.value))} className="vn-input mt-1" />
-            </label>
+            <div className="block text-[13px] text-[var(--vn-ink-soft)]">
+              <label>Iuran bulanan</label>
+              <div className="mt-1">
+                <MoneyInput value={monthly} onChange={setMonthly} />
+              </div>
+            </div>
             <label className="block text-[13px] text-[var(--vn-ink-soft)]">
               Asumsi return tahunan (%)
               <input type="number" value={returnPct} onChange={e => setReturnPct(Number(e.target.value))} className="vn-input mt-1" />

@@ -1,12 +1,11 @@
 /**
- * Cron daemon.
+ * Cron daemon — polls every 30 s and dispatches:
+ *   1. Price alerts (saham / crypto crossing target)
+ *   2. Reminders due now
+ *   3. Auto-cashflow rules due now (insert cashflow entry + notify Telegram)
  *
- * Polls every 30 s and dispatches:
- *  1. Price alerts (saham / crypto crossing target) → Telegram + cooldown
- *  2. Reminders due now → Telegram, mark fired
- *
- * Iterates every user that has an entry in `settings` (assumes self-host
- * 1–N user scale, not thousands).
+ * Self-host scale assumed (iterates user ids 1..10). For bigger scale,
+ * swap to "SELECT DISTINCT user_id FROM ..." style queries.
  */
 
 import {
@@ -15,12 +14,15 @@ import {
   listDueReminders,
   markReminderFired,
   markAlertFired,
+  listDueCashflowRules,
+  updateCashflowRule,
 } from '../lib/db.js'
 import { getQuote } from '../lib/yahoo.js'
 import { getCoinDetail } from '../lib/coingecko.js'
+import { computeNextFire } from '../tools/finance.js'
 
 const POLL_INTERVAL_MS = 30_000
-const COOLDOWN_MS = 60 * 60 * 1000
+const ALERT_COOLDOWN_MS = 60 * 60 * 1000
 let started = false
 let timer = null
 
@@ -57,16 +59,20 @@ async function notifyTelegram(chatId, text) {
   }
 }
 
+function fmtIDR(n) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(n) || 0)
+}
+
 async function tick() {
   try {
-    // Step 1: alerts (iterate likely user ids — self-host scale)
+    // 1) Alerts
     for (let userId = 1; userId <= 10; userId++) {
       const rows = listAlerts(userId, true)
       if (!rows.length) continue
       const settings = getSettings(userId)
       const chatId = settings?.telegram_chat_id
       for (const a of rows) {
-        if (a.last_fired_at && Date.now() - a.last_fired_at < COOLDOWN_MS) continue
+        if (a.last_fired_at && Date.now() - a.last_fired_at < ALERT_COOLDOWN_MS) continue
         const price = await fetchPrice(a.kind, a.symbol)
         if (!Number.isFinite(price)) continue
         const triggered =
@@ -83,19 +89,36 @@ async function tick() {
       }
     }
 
-    // Step 2: reminders due now
-    const due = listDueReminders(Date.now())
-    for (const r of due) {
+    // 2) Reminders
+    const dueReminders = listDueReminders(Date.now())
+    for (const r of dueReminders) {
       const settings = getSettings(r.user_id)
       const chatId = settings?.telegram_chat_id
       const body = `⏰ *Pengingat dari Vnansial*\n${r.message}`
       if (r.channel === 'telegram') {
         const sent = await notifyTelegram(chatId, body)
         console.log(`[cron] reminder #${r.id} sent via telegram=${sent}`)
-      } else {
-        console.log(`[cron] reminder #${r.id} marked for in-app delivery`)
       }
       markReminderFired(r.id)
+    }
+
+    // 3) Auto-cashflow rules
+    const dueRules = listDueCashflowRules(Date.now())
+    for (const rule of dueRules) {
+      const settings = getSettings(rule.user_id)
+      const chatId = settings?.telegram_chat_id
+      const sign = rule.kind === 'income' ? '+' : '−'
+      const emoji = rule.kind === 'income' ? '💰' : '💳'
+      const body =
+        `${emoji} *Auto cashflow*\n` +
+        `${rule.category}: *${sign}${fmtIDR(rule.amount)}*\n` +
+        (rule.note ? `_${rule.note}_\n` : '') +
+        `Jadwal: ${rule.schedule}`
+      await notifyTelegram(chatId, body)
+      // Reschedule
+      const nextFire = computeNextFire(rule, Date.now())
+      updateCashflowRule(rule.id, { last_fired_at: Date.now(), next_fire_at: nextFire })
+      console.log(`[cron] cashflow rule #${rule.id} fired, next at ${new Date(nextFire).toISOString()}`)
     }
   } catch (err) {
     console.error('[cron] tick error', err.message)

@@ -553,4 +553,175 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'list_debts',
+      description: 'Daftar hutang aktif user + total sisa dan total cicilan bulanan. Butuh PIN.',
+      parameters: { type: 'object', properties: { pin: { type: 'string' } }, required: ['pin'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_debt',
+      description: 'Tambah hutang ke portofolio user. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          name: { type: 'string', description: 'Nama hutang (mis. KPR BCA, pinjol dana cepat)' },
+          kind: { type: 'string', description: 'pinjaman, kpr, kartu_kredit, pinjol, dll.' },
+          principal: { type: 'number', description: 'Pokok awal hutang dalam Rupiah' },
+          remaining: { type: 'number', description: 'Sisa hutang saat ini' },
+          monthlyPayment: { type: 'number', description: 'Cicilan per bulan' },
+          annualRate: { type: 'number', description: 'Bunga tahunan dalam %' },
+          dueDay: { type: 'integer', description: 'Tanggal jatuh tempo bulanan (1-31)' },
+        },
+        required: ['pin', 'name', 'principal'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_debt',
+      description: 'Update hutang user. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          id: { type: 'integer' },
+          name: { type: 'string' },
+          remaining: { type: 'number' },
+          monthlyPayment: { type: 'number' },
+        },
+        required: ['pin', 'id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remove_debt',
+      description: 'Hapus hutang. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' }, id: { type: 'integer' } },
+        required: ['pin', 'id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_cashflow_rules',
+      description: 'Daftar aturan auto-cashflow (gaji, cicilan, tagihan rutin). Butuh PIN.',
+      parameters: { type: 'object', properties: { pin: { type: 'string' } }, required: ['pin'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_cashflow_rule',
+      description:
+        'Buat aturan auto-cashflow yang akan otomatis menambah entri pemasukan/pengeluaran pada jadwalnya. Cron daemon akan eksekusi + notifikasi via Telegram. Contoh: gaji bulanan tanggal 25, tagihan listrik tanggal 20.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          kind: { type: 'string', enum: ['income', 'expense'] },
+          category: { type: 'string', description: 'Mis. Gaji, Listrik, Internet, Kos' },
+          amount: { type: 'number' },
+          schedule: { type: 'string', enum: ['daily', 'weekly', 'monthly'] },
+          dayOfMonth: { type: 'integer', description: '1-31 untuk schedule monthly' },
+          dayOfWeek: { type: 'integer', description: '0=Sun..6=Sat untuk schedule weekly' },
+          note: { type: 'string' },
+        },
+        required: ['pin', 'kind', 'category', 'amount'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'toggle_cashflow_rule',
+      description: 'Aktifkan / non-aktifkan aturan auto-cashflow. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          id: { type: 'integer' },
+          active: { type: 'boolean' },
+        },
+        required: ['pin', 'id', 'active'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_cashflow_rule',
+      description: 'Hapus aturan auto-cashflow. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' }, id: { type: 'integer' } },
+        required: ['pin', 'id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_token_whitepaper',
+      description: 'Ambil link whitepaper / fundamentals untuk satu aset (crypto id atau kode emiten IDX).',
+      parameters: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'upsert_token_whitepaper',
+      description: 'Tambah / update whitepaper untuk satu aset. Disimpan di SQLite (cross-user).',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          kind: { type: 'string', enum: ['crypto', 'saham', 'komoditas'] },
+          name: { type: 'string' },
+          url: { type: 'string' },
+          summary: { type: 'string' },
+        },
+        required: ['id', 'url'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_token_whitepapers',
+      description: 'Daftar semua whitepaper yang sudah ada (curated + override SQLite).',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'analyze_asset',
+      description:
+        'Mulai analisis lengkap satu aset (saham/crypto/komoditas) dengan framework makro+mikro+sentimen+risiko. Hasil = kerangka faktor yang harus kamu isi dengan tool calls data + pengetahuan domain.',
+      parameters: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['saham', 'crypto', 'komoditas'] },
+          symbol: { type: 'string' },
+        },
+        required: ['kind', 'symbol'],
+      },
+    },
+  },
 ]

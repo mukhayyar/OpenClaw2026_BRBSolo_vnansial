@@ -17,6 +17,7 @@ const ITEMS: Item[] = [
   { to: '/emiten', title: 'Cek Emiten IDX', desc: 'Profil, dividen, ESG, pemegang saham', eyebrow: 'Saham', tone: 'cream' },
   { to: '/crypto', title: 'CryptoWatch', desc: 'Harga + skor risiko scam', eyebrow: 'Crypto' },
   { to: '/asuransi', title: 'Asuransi', desc: 'Bandingkan & hitung premi', eyebrow: 'Proteksi', tone: 'mint' },
+  { to: '/komoditas', title: 'Komoditas', desc: 'Minyak, emas, perak, gas, agri', eyebrow: 'Komoditas' },
   { to: '/edukasi', title: 'Edukasi + Kalkulator', desc: 'Quiz, tips, kalkulator bunga jujur', eyebrow: 'Belajar' },
   { to: '/cek-investasi', title: 'Cek Investasi', desc: 'Verifikasi izin OJK & red flag', eyebrow: 'Verifikasi', tone: 'cream' },
   { to: '/rencana-investasi', title: 'Rencana Investasi', desc: 'Target & alokasi aset', eyebrow: 'Rencana' },

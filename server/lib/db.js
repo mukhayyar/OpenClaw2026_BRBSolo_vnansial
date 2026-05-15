@@ -133,6 +133,46 @@ async function tryLoadSqlite() {
         FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS idx_reminder_pending ON reminder(fire_at, fired_at);
+      CREATE TABLE IF NOT EXISTS debt (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'pinjaman',
+        principal REAL NOT NULL,
+        remaining REAL NOT NULL,
+        monthly_payment REAL,
+        annual_rate REAL,
+        due_day INTEGER,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_debt_user ON debt(user_id);
+      CREATE TABLE IF NOT EXISTS cashflow_rule (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        kind TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount REAL NOT NULL,
+        schedule TEXT NOT NULL DEFAULT 'monthly',
+        day_of_month INTEGER,
+        day_of_week INTEGER,
+        active INTEGER NOT NULL DEFAULT 1,
+        last_fired_at INTEGER,
+        next_fire_at INTEGER NOT NULL,
+        note TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_cashflow_rule_pending ON cashflow_rule(active, next_fire_at);
+      CREATE TABLE IF NOT EXISTS token_whitepaper (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        name TEXT,
+        url TEXT NOT NULL,
+        summary TEXT,
+        updated_at INTEGER NOT NULL,
+        updated_by_agent TEXT
+      );
     `)
     return true
   } catch (err) {
@@ -540,6 +580,119 @@ export function deleteReminder(id) {
     if (m) m.delete(Number(id))
   }
   return true
+}
+
+// Debt ------------------------------------------------------------
+export function listDebts(userId) {
+  if (driver === 'sqlite') return db.prepare('SELECT * FROM debt WHERE user_id = ?').all(userId)
+  return memList('debt').filter(d => d.user_id === userId)
+}
+export function createDebt(row) {
+  const t = now()
+  const r = { ...row, created_at: t }
+  if (driver === 'sqlite') {
+    const info = db.prepare(
+      'INSERT INTO debt (user_id, name, kind, principal, remaining, monthly_payment, annual_rate, due_day, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(r.user_id, r.name, r.kind || 'pinjaman', r.principal, r.remaining ?? r.principal, r.monthly_payment ?? null, r.annual_rate ?? null, r.due_day ?? null, t)
+    return db.prepare('SELECT * FROM debt WHERE id = ?').get(info.lastInsertRowid)
+  }
+  return memInsert('debt', r)
+}
+export function updateDebt(id, patch) {
+  if (driver === 'sqlite') {
+    const cur = db.prepare('SELECT * FROM debt WHERE id = ?').get(id)
+    if (!cur) return null
+    const merged = { ...cur, ...patch }
+    db.prepare('UPDATE debt SET name=?, kind=?, principal=?, remaining=?, monthly_payment=?, annual_rate=?, due_day=? WHERE id=?')
+      .run(merged.name, merged.kind, merged.principal, merged.remaining, merged.monthly_payment ?? null, merged.annual_rate ?? null, merged.due_day ?? null, id)
+    return db.prepare('SELECT * FROM debt WHERE id = ?').get(id)
+  }
+  const m = mem.get('debt')
+  if (m) for (const v of m.values()) if (v.id === Number(id)) Object.assign(v, patch)
+  return memList('debt').find(d => d.id === Number(id))
+}
+export function deleteDebt(id) {
+  if (driver === 'sqlite') db.prepare('DELETE FROM debt WHERE id = ?').run(id)
+  else {
+    const m = mem.get('debt')
+    if (m) m.delete(Number(id))
+  }
+  return true
+}
+
+// Cashflow rules --------------------------------------------------
+export function listCashflowRules(userId, activeOnly = false) {
+  if (driver === 'sqlite') {
+    const q = activeOnly
+      ? 'SELECT * FROM cashflow_rule WHERE user_id = ? AND active = 1 ORDER BY next_fire_at'
+      : 'SELECT * FROM cashflow_rule WHERE user_id = ? ORDER BY next_fire_at'
+    return db.prepare(q).all(userId)
+  }
+  return memList('cashflow_rule')
+    .filter(c => c.user_id === userId && (!activeOnly || c.active))
+    .sort((a, b) => a.next_fire_at - b.next_fire_at)
+}
+export function listDueCashflowRules(beforeMs = Date.now()) {
+  if (driver === 'sqlite') {
+    return db.prepare('SELECT * FROM cashflow_rule WHERE active = 1 AND next_fire_at <= ?').all(beforeMs)
+  }
+  return memList('cashflow_rule').filter(c => c.active && c.next_fire_at <= beforeMs)
+}
+export function createCashflowRule(row) {
+  const t = now()
+  const r = { active: 1, last_fired_at: null, created_at: t, ...row }
+  if (driver === 'sqlite') {
+    const info = db.prepare(
+      'INSERT INTO cashflow_rule (user_id, kind, category, amount, schedule, day_of_month, day_of_week, active, next_fire_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(r.user_id, r.kind, r.category, r.amount, r.schedule, r.day_of_month ?? null, r.day_of_week ?? null, r.active, r.next_fire_at, r.note ?? null, t)
+    return db.prepare('SELECT * FROM cashflow_rule WHERE id = ?').get(info.lastInsertRowid)
+  }
+  return memInsert('cashflow_rule', r)
+}
+export function updateCashflowRule(id, patch) {
+  if (driver === 'sqlite') {
+    const cur = db.prepare('SELECT * FROM cashflow_rule WHERE id = ?').get(id)
+    if (!cur) return null
+    const m = { ...cur, ...patch }
+    db.prepare('UPDATE cashflow_rule SET active=?, next_fire_at=?, last_fired_at=?, amount=?, category=? WHERE id=?')
+      .run(m.active, m.next_fire_at, m.last_fired_at, m.amount, m.category, id)
+    return db.prepare('SELECT * FROM cashflow_rule WHERE id = ?').get(id)
+  }
+  const m = mem.get('cashflow_rule')
+  if (m) for (const v of m.values()) if (v.id === Number(id)) Object.assign(v, patch)
+  return memList('cashflow_rule').find(c => c.id === Number(id))
+}
+export function deleteCashflowRule(id) {
+  if (driver === 'sqlite') db.prepare('DELETE FROM cashflow_rule WHERE id = ?').run(id)
+  else {
+    const m = mem.get('cashflow_rule')
+    if (m) m.delete(Number(id))
+  }
+  return true
+}
+
+// Token whitepapers (shared across users) -------------------------
+export function getWhitepaper(id) {
+  if (driver === 'sqlite') return db.prepare('SELECT * FROM token_whitepaper WHERE id = ?').get(id)
+  return memList('token_whitepaper').find(w => w.id === id) || null
+}
+export function listWhitepapers() {
+  if (driver === 'sqlite') return db.prepare('SELECT * FROM token_whitepaper').all()
+  return memList('token_whitepaper')
+}
+export function upsertWhitepaper({ id, kind, name, url, summary, updated_by_agent }) {
+  const t = now()
+  if (driver === 'sqlite') {
+    db.prepare(`
+      INSERT INTO token_whitepaper (id, kind, name, url, summary, updated_at, updated_by_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, name=excluded.name, url=excluded.url, summary=excluded.summary, updated_at=excluded.updated_at, updated_by_agent=excluded.updated_by_agent
+    `).run(id, kind, name ?? null, url, summary ?? null, t, updated_by_agent ?? null)
+    return db.prepare('SELECT * FROM token_whitepaper WHERE id = ?').get(id)
+  }
+  const list = mem.get('token_whitepaper') || new Map()
+  for (const [k, v] of list) if (v.id === id) list.delete(k)
+  return memInsert('token_whitepaper', { id, kind, name, url, summary, updated_at: t, updated_by_agent })
 }
 
 export function closeDb() {

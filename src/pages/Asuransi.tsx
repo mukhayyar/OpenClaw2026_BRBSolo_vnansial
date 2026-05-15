@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
+import MoneyInput from '../components/MoneyInput'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -194,10 +195,12 @@ export default function Asuransi() {
                 <option value="unitlink">Unit Link</option>
               </select>
             </label>
-            <label className="block text-[13px]">
-              Coverage (sum insured)
-              <input type="number" value={coverage} onChange={e => setCoverage(Number(e.target.value))} className="vn-input mt-1" />
-            </label>
+            <div className="block text-[13px]">
+              <label>Coverage (sum insured)</label>
+              <div className="mt-1">
+                <MoneyInput value={coverage} onChange={setCoverage} />
+              </div>
+            </div>
             <label className="block text-[13px]">
               Usia
               <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} className="vn-input mt-1" />
@@ -232,10 +235,12 @@ export default function Asuransi() {
               Usia
               <input type="number" value={profile.age} onChange={e => setProfile(p => ({ ...p, age: Number(e.target.value) }))} className="vn-input mt-1" />
             </label>
-            <label className="block text-[13px]">
-              Penghasilan/bulan
-              <input type="number" value={profile.monthlyIncome} onChange={e => setProfile(p => ({ ...p, monthlyIncome: Number(e.target.value) }))} className="vn-input mt-1" />
-            </label>
+            <div className="block text-[13px]">
+              <label>Penghasilan/bulan</label>
+              <div className="mt-1">
+                <MoneyInput value={profile.monthlyIncome} onChange={v => setProfile(p => ({ ...p, monthlyIncome: v }))} />
+              </div>
+            </div>
             <label className="block text-[13px]">
               Tanggungan
               <input type="number" value={profile.dependents} onChange={e => setProfile(p => ({ ...p, dependents: Number(e.target.value) }))} className="vn-input mt-1" />

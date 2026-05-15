@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
 import TradingChart from '../components/TradingChart'
+import AnalysisModal from '../components/AnalysisModal'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -50,6 +51,7 @@ export default function CryptoWatch() {
   const [risk, setRisk] = useState<RiskResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [riskLoading, setRiskLoading] = useState(false)
+  const [analyzeOpen, setAnalyzeOpen] = useState(false)
   const [searchQ, setSearchQ] = useState('')
   const [searchResults, setSearchResults] = useState<{ id: string; symbol: string; name: string; image?: string }[]>([])
 
@@ -200,6 +202,12 @@ export default function CryptoWatch() {
               <p className={`mt-5 text-[11px] ${risk.risk.score >= 70 ? 'text-white/55' : 'text-[var(--vn-muted)]'}`}>
                 Skor heuristik berdasarkan data publik. Bukan audit smart contract. DYOR.
               </p>
+              <button
+                onClick={() => setAnalyzeOpen(true)}
+                className={`mt-4 inline-flex vn-btn text-[13px] ${risk.risk.score >= 70 ? 'vn-btn-on-dark' : 'vn-btn-primary'}`}
+              >
+                ✨ Analisis lengkap dengan AI
+              </button>
             </motion.div>
           )}
         </Bento>
@@ -252,6 +260,14 @@ export default function CryptoWatch() {
           </table>
         </div>
       </Bento>
+
+      <AnalysisModal
+        open={analyzeOpen}
+        kind="crypto"
+        symbol={selected}
+        name={risk?.coin?.name}
+        onClose={() => setAnalyzeOpen(false)}
+      />
     </PageShell>
   )
 }

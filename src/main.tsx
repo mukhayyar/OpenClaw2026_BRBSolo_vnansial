@@ -16,6 +16,7 @@ import CryptoWatch from './pages/CryptoWatch'
 import Asuransi from './pages/Asuransi'
 import Portofolio from './pages/Portofolio'
 import SettingsPage from './pages/Settings'
+import Komoditas from './pages/Komoditas'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/crypto" element={<CryptoWatch />} />
           <Route path="/asuransi" element={<Asuransi />} />
           <Route path="/portofolio" element={<Portofolio />} />
+          <Route path="/komoditas" element={<Komoditas />} />
           <Route path="/kalkulator" element={<KalkulatorPinjaman />} />
           <Route path="/edukasi" element={<Edukasi />} />
           <Route path="/lapor" element={<LaporPenipuan />} />

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Bento from '../components/Bento'
+import MoneyInput from '../components/MoneyInput'
 
 function calcLoan(principal: number, annualRate: number, months: number) {
   const r = annualRate / 100 / 12
@@ -43,7 +44,7 @@ export default function KalkulatorPanel() {
         <Bento padding="lg" className="lg:col-span-2 space-y-5">
           <div>
             <label className="vn-eyebrow mb-2 block">Jumlah pinjaman</label>
-            <input type="number" value={principal} onChange={e => setPrincipal(Number(e.target.value))} className="vn-input" />
+            <MoneyInput value={principal} onChange={setPrincipal} />
             <input
               type="range" min={500_000} max={100_000_000} step={500_000} value={principal}
               onChange={e => setPrincipal(Number(e.target.value))}

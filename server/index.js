@@ -53,6 +53,18 @@ import {
   deleteAlert,
 } from './lib/db.js'
 import { requirePin, HAS_PIN } from './lib/auth.js'
+import { lookupWhitepaper, listAllWhitepapers } from './lib/whitepapers.js'
+import {
+  listDebts as dbListDebts,
+  createDebt as dbCreateDebt,
+  updateDebt as dbUpdateDebt,
+  deleteDebt as dbDeleteDebt,
+  listCashflowRules as dbListCashflowRules,
+  createCashflowRule as dbCreateCashflowRule,
+  updateCashflowRule as dbUpdateCashflowRule,
+  deleteCashflowRule as dbDeleteCashflowRule,
+} from './lib/db.js'
+import { computeNextFire } from './tools/finance.js'
 import { AGENT_PRESETS, findAgent } from './agent/presets.js'
 import { startTelegram } from './integrations/telegram.js'
 import { startCron } from './integrations/cron.js'
@@ -258,6 +270,70 @@ app.post('/api/me/portfolio/buffer', requirePin, (req, res) => {
   const { kind, amount, target } = req.body || {}
   if (!kind) return res.status(400).json({ error: 'kind required' })
   res.json(upsertBuffer({ userId: req.user.id, kind, amount: Number(amount) || 0, target: Number(target) || null }))
+})
+
+// ----- Debt ---------------------------------------------------------
+app.get('/api/me/debts', requirePin, (req, res) => {
+  res.json({ debts: dbListDebts(req.user.id) })
+})
+app.post('/api/me/debts', requirePin, (req, res) => {
+  const { name, principal, remaining, monthlyPayment, annualRate, dueDay, kind } = req.body || {}
+  if (!name || !Number.isFinite(Number(principal))) return res.status(400).json({ error: 'name & principal required' })
+  const row = dbCreateDebt({
+    user_id: req.user.id,
+    name: String(name), kind: kind || 'pinjaman',
+    principal: Number(principal), remaining: Number(remaining ?? principal),
+    monthly_payment: Number(monthlyPayment) || null,
+    annual_rate: Number(annualRate) || null,
+    due_day: Number(dueDay) || null,
+  })
+  res.json(row)
+})
+app.patch('/api/me/debts/:id', requirePin, (req, res) => {
+  res.json(dbUpdateDebt(Number(req.params.id), {
+    name: req.body?.name,
+    remaining: req.body?.remaining,
+    monthly_payment: req.body?.monthlyPayment,
+  }))
+})
+app.delete('/api/me/debts/:id', requirePin, (req, res) => {
+  dbDeleteDebt(Number(req.params.id))
+  res.json({ ok: true })
+})
+
+// ----- Cashflow rules ----------------------------------------------
+app.get('/api/me/cashflow-rules', requirePin, (req, res) => {
+  res.json({ rules: dbListCashflowRules(req.user.id) })
+})
+app.post('/api/me/cashflow-rules', requirePin, (req, res) => {
+  const { kind, category, amount, schedule, dayOfMonth, dayOfWeek, note } = req.body || {}
+  if (!['income', 'expense'].includes(kind)) return res.status(400).json({ error: 'kind required' })
+  const rule = {
+    user_id: req.user.id, kind, category, amount: Number(amount),
+    schedule: schedule || 'monthly',
+    day_of_month: schedule === 'monthly' ? Number(dayOfMonth ?? 1) : null,
+    day_of_week: schedule === 'weekly' ? Number(dayOfWeek ?? 1) : null,
+    note: note || null,
+  }
+  rule.next_fire_at = computeNextFire(rule)
+  res.json(dbCreateCashflowRule(rule))
+})
+app.patch('/api/me/cashflow-rules/:id', requirePin, (req, res) => {
+  res.json(dbUpdateCashflowRule(Number(req.params.id), { active: req.body?.active ? 1 : 0 }))
+})
+app.delete('/api/me/cashflow-rules/:id', requirePin, (req, res) => {
+  dbDeleteCashflowRule(Number(req.params.id))
+  res.json({ ok: true })
+})
+
+// ----- Whitepapers --------------------------------------------------
+app.get('/api/whitepaper/:id', (req, res) => {
+  const r = lookupWhitepaper(req.params.id)
+  if (!r) return res.status(404).json({ error: 'whitepaper_not_found' })
+  res.json(r)
+})
+app.get('/api/whitepapers', (_req, res) => {
+  res.json({ whitepapers: listAllWhitepapers() })
 })
 
 // ----- Agent chat -----------------------------------------------------------

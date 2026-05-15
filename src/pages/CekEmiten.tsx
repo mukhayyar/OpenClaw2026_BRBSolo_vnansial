@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
 import TradingChart from '../components/TradingChart'
+import AnalysisModal from '../components/AnalysisModal'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -49,6 +50,7 @@ export default function CekEmiten() {
   const [overview, setOverview] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [analyzeOpen, setAnalyzeOpen] = useState(false)
 
   useEffect(() => {
     fetch(`${API}/api/idx/emiten`)
@@ -146,6 +148,12 @@ export default function CekEmiten() {
             <div className="mt-5">
               <TradingChart kind="saham" symbol={code} height={180} showAxis={false} range="3mo" />
             </div>
+            <button
+              onClick={() => setAnalyzeOpen(true)}
+              className="mt-4 inline-flex vn-btn vn-btn-on-dark text-[13px]"
+            >
+              ✨ Analisis lengkap dengan AI
+            </button>
             {profile && (
               <dl className="mt-4 grid sm:grid-cols-2 gap-3 text-white">
                 <div>
@@ -235,6 +243,14 @@ export default function CekEmiten() {
           </Bento>
         </div>
       </div>
+
+      <AnalysisModal
+        open={analyzeOpen}
+        kind="saham"
+        symbol={code}
+        name={profile?.NamaEmiten}
+        onClose={() => setAnalyzeOpen(false)}
+      />
     </PageShell>
   )
 }

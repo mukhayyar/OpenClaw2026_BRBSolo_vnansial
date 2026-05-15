@@ -37,6 +37,12 @@ import { createPriceAlert, listUserAlerts, deleteUserAlert } from './alerts.js'
 import { askOtherAgent } from './delegate.js'
 import { assessDexToken, searchDex } from '../lib/dexscreener.js'
 import { createUserReminder, listUserReminders, deleteUserReminder } from './reminders.js'
+import {
+  getUserDebts, addDebt, updateUserDebt, removeDebt,
+  listUserCashflowRules, createUserCashflowRule, toggleUserCashflowRule, deleteUserCashflowRule,
+  getTokenWhitepaper, upsertTokenWhitepaper, listTokenWhitepapers,
+  analyzeAsset,
+} from './finance.js'
 
 export async function runTool(name, args) {
   switch (name) {
@@ -112,6 +118,30 @@ export async function runTool(name, args) {
       return listUserReminders(args)
     case 'delete_reminder':
       return deleteUserReminder(args)
+    case 'list_debts':
+      return getUserDebts(args)
+    case 'add_debt':
+      return addDebt(args)
+    case 'update_debt':
+      return updateUserDebt(args)
+    case 'remove_debt':
+      return removeDebt(args)
+    case 'list_cashflow_rules':
+      return listUserCashflowRules(args)
+    case 'create_cashflow_rule':
+      return createUserCashflowRule(args)
+    case 'toggle_cashflow_rule':
+      return toggleUserCashflowRule(args)
+    case 'delete_cashflow_rule':
+      return deleteUserCashflowRule(args)
+    case 'get_token_whitepaper':
+      return getTokenWhitepaper(args)
+    case 'upsert_token_whitepaper':
+      return upsertTokenWhitepaper(args)
+    case 'list_token_whitepapers':
+      return listTokenWhitepapers()
+    case 'analyze_asset':
+      return analyzeAsset(args)
     default:
       return { error: `Unknown tool: ${name}` }
   }
