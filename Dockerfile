@@ -5,8 +5,9 @@ WORKDIR /app
 # better-sqlite3 needs native compilation
 RUN apk add --no-cache python3 make g++
 
+ENV NODE_ENV=development
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --include=dev
 COPY . .
 RUN npm run build
 
@@ -25,6 +26,7 @@ RUN npm ci --omit=dev \
 
 COPY server ./server
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/public ./public
 
 # SQLite & telegram data live here
 RUN mkdir -p /data && chown -R node:node /data
