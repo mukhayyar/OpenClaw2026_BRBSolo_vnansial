@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
 import LandscapeHero from '../components/LandscapeHero'
+import MoneyInput from '../components/MoneyInput'
 import { scoreFinancialHealth, type HealthInput, type Pillar } from '../lib/healthScore'
 
 const STORAGE_KEY = 'vnansial-health-input'
@@ -248,12 +249,9 @@ function Field({
         onChange={e => onChange(Number(e.target.value))}
         className="w-full accent-[var(--vn-forest)]"
       />
-      <input
-        type="number"
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className="vn-input mt-2 !py-2 text-[13px]"
-      />
+      <div className="mt-2">
+        <MoneyInput value={value} onChange={onChange} />
+      </div>
     </div>
   )
 }

@@ -55,6 +55,8 @@ import {
 import { requirePin, HAS_PIN } from './lib/auth.js'
 import { AGENT_PRESETS, findAgent } from './agent/presets.js'
 import { startTelegram } from './integrations/telegram.js'
+import { startCron } from './integrations/cron.js'
+import { searchDex, assessDexToken } from './lib/dexscreener.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT) || 3001
@@ -174,6 +176,15 @@ app.get('/api/crypto/search', async (req, res) => {
 
 app.get('/api/crypto/history', async (req, res) => {
   res.json(await getCoinHistory(req.query.id, Number(req.query.days) || 90))
+})
+
+// ----- DexScreener (meme coin / degen) -------------------------------------
+app.get('/api/dex/search', async (req, res) => {
+  res.json(await searchDex(req.query.q || req.query.query))
+})
+
+app.get('/api/dex/assess', async (req, res) => {
+  res.json(await assessDexToken({ query: req.query.q || req.query.query }))
 })
 
 // ----- Insurance ------------------------------------------------------------
@@ -430,5 +441,6 @@ if (isMain) {
     console.log(`  SumoPod:  ${process.env.SUMOPOD_API_KEY ? 'configured' : 'MISSING'}`)
     console.log(`  DB:       ${getDriver()}`)
     if (process.env.TELEGRAM_BOT_TOKEN) startTelegram()
+    if (getDriver() === 'sqlite') startCron()
   })
 }

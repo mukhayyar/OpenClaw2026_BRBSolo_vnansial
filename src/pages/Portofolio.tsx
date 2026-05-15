@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
 import PinGate from '../components/PinGate'
+import MoneyInput from '../components/MoneyInput'
 import { pinHeader, getPin } from '../lib/auth'
 
 const API = import.meta.env.VITE_API_URL || ''
@@ -405,14 +406,18 @@ function PortofolioBody() {
             return (
               <div key={b.kind} className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
                 <p className="vn-eyebrow mb-2">{label}</p>
-                <label className="block text-[12px] mb-2">
-                  Saldo
-                  <input type="number" value={b.amount || ''} onChange={e => updateBuffer(b.kind, { amount: Number(e.target.value) })} className="vn-input mt-1" />
-                </label>
-                <label className="block text-[12px] mb-3">
-                  Target
-                  <input type="number" value={b.target || ''} onChange={e => updateBuffer(b.kind, { target: Number(e.target.value) })} className="vn-input mt-1" />
-                </label>
+                <div className="block text-[12px] mb-2">
+                  <label>Saldo</label>
+                  <div className="mt-1">
+                    <MoneyInput value={b.amount || 0} onChange={v => updateBuffer(b.kind, { amount: v })} />
+                  </div>
+                </div>
+                <div className="block text-[12px] mb-3">
+                  <label>Target</label>
+                  <div className="mt-1">
+                    <MoneyInput value={b.target || 0} onChange={v => updateBuffer(b.kind, { target: v })} />
+                  </div>
+                </div>
                 <div className="h-1.5 rounded-full bg-white overflow-hidden mb-2">
                   <div
                     className="h-full transition-all duration-500"
@@ -679,15 +684,12 @@ function HoldingForm({ onAdd }: { onAdd: (h: Omit<Holding, 'id'>) => void }) {
           className="vn-input mt-1"
         />
       </label>
-      <label className="block text-[13px]">
-        Cost basis per unit (Rp)
-        <input
-          type="number"
-          value={costBasis || ''}
-          onChange={e => setCostBasis(Number(e.target.value))}
-          className="vn-input mt-1"
-        />
-      </label>
+      <div className="block text-[13px]">
+        <label>Cost basis per unit (Rp)</label>
+        <div className="mt-1">
+          <MoneyInput value={costBasis || 0} onChange={v => setCostBasis(v || undefined)} />
+        </div>
+      </div>
       <button
         onClick={() => {
           if (!symbol || !amount) return

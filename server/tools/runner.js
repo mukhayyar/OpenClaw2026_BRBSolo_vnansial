@@ -32,6 +32,10 @@ import {
   listHealthHistory,
 } from './portfolio.js'
 import { checkBankAccount, checkPhoneNumber } from '../lib/scamCheck.js'
+import { renderChart } from './charts.js'
+import { createPriceAlert, listUserAlerts, deleteUserAlert } from './alerts.js'
+import { askOtherAgent } from './delegate.js'
+import { assessDexToken, searchDex } from '../lib/dexscreener.js'
 
 export async function runTool(name, args) {
   switch (name) {
@@ -87,6 +91,20 @@ export async function runTool(name, args) {
       return checkBankAccount(args)
     case 'check_phone_number_report':
       return checkPhoneNumber(args)
+    case 'render_chart':
+      return renderChart(args)
+    case 'create_price_alert':
+      return createPriceAlert(args)
+    case 'list_price_alerts':
+      return listUserAlerts(args)
+    case 'delete_price_alert':
+      return deleteUserAlert(args)
+    case 'ask_other_agent':
+      return askOtherAgent(args)
+    case 'search_dex_token':
+      return searchDex(args?.query)
+    case 'assess_dex_token':
+      return assessDexToken(args)
     default:
       return { error: `Unknown tool: ${name}` }
   }

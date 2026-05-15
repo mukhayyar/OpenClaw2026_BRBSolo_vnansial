@@ -411,4 +411,98 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'render_chart',
+      description:
+        'Minta UI menampilkan grafik harga interaktif di dalam jawaban chat. Setelah memanggil tool ini, sertakan field "marker" dari hasilnya di jawabanmu agar UI render grafik di tempat itu.',
+      parameters: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['saham', 'crypto'] },
+          symbol: { type: 'string', description: 'Ticker atau coin id, contoh BBCA atau bitcoin' },
+          range: { type: 'string', enum: ['1mo', '3mo', '6mo', '1y'], description: 'Rentang waktu, default 3mo' },
+        },
+        required: ['kind', 'symbol'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_price_alert',
+      description: 'Buat alert harga (saham/crypto) yang akan diperiksa setiap menit dan dinotifikasi via Telegram bila kondisi tercapai. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          kind: { type: 'string', enum: ['saham', 'crypto'] },
+          symbol: { type: 'string' },
+          condition: { type: 'string', enum: ['above', 'below'] },
+          target: { type: 'number' },
+        },
+        required: ['pin', 'kind', 'symbol', 'condition', 'target'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_price_alerts',
+      description: 'Daftar alert aktif user. Butuh PIN.',
+      parameters: { type: 'object', properties: { pin: { type: 'string' } }, required: ['pin'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_price_alert',
+      description: 'Hapus alert berdasarkan id. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' }, id: { type: 'integer' } },
+        required: ['pin', 'id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'ask_other_agent',
+      description: 'Delegasi pertanyaan ke agent preset lain (misal "investor", "penipuan", "asuransi"). Berguna ketika spesialis akan menjawab lebih akurat.',
+      parameters: {
+        type: 'object',
+        properties: {
+          agentId: { type: 'string', description: 'Salah satu: generalis, pemula, investor, penipuan, asuransi, wellness' },
+          question: { type: 'string' },
+        },
+        required: ['agentId', 'question'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_dex_token',
+      description: 'Cari token DEX (termasuk meme coin / degen / low-cap) di DexScreener berdasarkan nama atau simbol. Mencakup token yang belum ada di CoinGecko.',
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string' } },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'assess_dex_token',
+      description: 'Cari token DEX + skor risiko (likuiditas, umur pair, FDV, volatilitas 24j) untuk meme coin. Wajib dipakai sebelum bahas potensi return meme coin.',
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string' } },
+        required: ['query'],
+      },
+    },
+  },
 ]

@@ -1,17 +1,33 @@
 # Super Platform v2 — Progress
-Status: in_progress
+Status: done (most tracks shipped; agent-to-agent visible UI deferred)
 Started: 2026-05-15
+Completed: 2026-05-15
 
 - [x] Plan written
-- [ ] Trading chart (TradingChart component + page embeds)
-- [ ] Tool-call timeline polish
-- [ ] Settings page (masked telegram + PIN-gated edits)
-- [ ] Multi-agent presets + dropdown
-- [ ] Chat sessions + .md export
-- [ ] Number masking
-- [ ] Crypto search (full CoinGecko)
-- [ ] Alerts + cron scaffold
-- [ ] GitHub Actions ghcr release.yml
-- [ ] README update with ghcr docker run snippet
-- [ ] Puppeteer fallback scaffold
-- [ ] Final tests + build
+- [x] Trading chart (TradingChart component + page embeds)
+- [x] Tool-call timeline polished (visible inline under each assistant turn)
+- [x] Settings page (masked telegram + PIN-gated edits)
+- [x] Multi-agent presets + dropdown
+- [x] Chat sessions + .md export
+- [x] Number masking (MoneyInput applied in Kesehatan + Portofolio core)
+- [x] Crypto search (full CoinGecko + DexScreener for meme coins)
+- [x] Alerts + cron scaffold (alert table + cron daemon + Telegram notify)
+- [x] GitHub Actions ghcr release.yml
+- [x] README update with ghcr docker run snippet
+- [x] Puppeteer fallback scaffold (env-gated, optional deps)
+- [x] AI chart-in-chat ([[chart:kind:symbol:range]] markers)
+- [x] Agent tools: create_price_alert, list_price_alerts,
+      delete_price_alert, render_chart, ask_other_agent,
+      search_dex_token, assess_dex_token
+- [x] Telegram cross-channel: auto-bind chat_id, /sessions /continue
+      /alerts commands, cron-fired alerts go to bound chat
+- [x] Final tests + build (32 tests passing, 500KB → 151KB gzip)
+
+## Deferred for next iteration
+- Visible UI for agent-to-agent communication (currently invocations
+  are logged in toolCalls but not rendered as nested speech bubbles)
+- Apply MoneyInput to Asuransi, Rencana, Kalkulator currency inputs
+  (these still use plain number inputs)
+- Container image actually published to ghcr (workflow added; first
+  push triggers a build — observe the Actions tab)
+- True multi-arch runtime test of the docker image

@@ -17,11 +17,12 @@
  * Polling loop & graceful shutdown built in.
  */
 
-import { ensureUser, listHealthSnapshots, listHoldings } from '../lib/db.js'
+import { ensureUser, listHealthSnapshots, listHoldings, listSessions, getSession, listMessages, listAlerts, saveSettings, getSettings } from '../lib/db.js'
 import { getQuote } from '../lib/yahoo.js'
 import { getCompanyProfile } from '../lib/idx.js'
 import { assessCryptoRisk, getCoinDetail } from '../lib/coingecko.js'
 import { runAgentChat } from '../agent/loop.js'
+import { findAgent } from '../agent/presets.js'
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const API = TOKEN ? `https://api.telegram.org/bot${TOKEN}` : null
@@ -53,12 +54,16 @@ async function reply(chatId, text, opts = {}) {
 
 const HELP = `*Vnansial Asisten*
 
-Perintah yang tersedia:
+Perintah:
 \`/score\` — skor kesehatan finansial terakhir
 \`/quote SYMBOL\` — kutipan saham (AAPL, BBCA.JK)
 \`/crypto ID\` — risk score crypto (bitcoin, ethereum, …)
-\`/emiten KODE\` — info perusahaan IDX (BBCA, GOTO, AADI, …)
+\`/emiten KODE\` — info perusahaan IDX
 \`/ask <pertanyaan>\` — tanya bebas ke asisten AI
+\`/sessions\` — daftar sesi chat dari web
+\`/continue NUM\` — lanjutkan sesi web di Telegram (pakai konteks 5 pesan terakhir)
+\`/alerts\` — daftar price alert aktif
+\`/bind\` — bind chat ini ke akun web (PIN diatur server-side)
 
 Buka aplikasi web untuk fitur lengkap.`
 
@@ -68,10 +73,17 @@ async function handleCommand(message) {
   const [cmd, ...rest] = text.split(/\s+/)
   const arg = rest.join(' ').trim()
   const user = ensureUser({ telegramChatId: chatId, nickname: message.from?.first_name })
+  // Auto-bind chat id to the same user's settings row so the cron daemon can notify
+  try {
+    const existing = getSettings(user.id)
+    if (!existing || existing.telegram_chat_id !== String(chatId)) {
+      saveSettings({ userId: user.id, telegramChatId: String(chatId), defaultAgentId: existing?.default_agent_id || 'generalis' })
+    }
+  } catch {}
 
   try {
-    if (cmd === '/start') {
-      await reply(chatId, `Halo ${message.from?.first_name || 'di sana'}! Akun Telegram-mu terbind ke Vnansial.\n\n${HELP}`)
+    if (cmd === '/start' || cmd === '/bind') {
+      await reply(chatId, `Halo ${message.from?.first_name || 'di sana'}! Akun Telegram-mu terbind ke Vnansial (chat_id: \`${chatId}\`).\n\nAlert harga & notifikasi cron akan masuk ke chat ini.\n\n${HELP}`)
       return
     }
     if (cmd === '/help') {
@@ -130,17 +142,54 @@ async function handleCommand(message) {
       await reply(chatId, `*Portofolio kamu*\n${lines}`)
       return
     }
-    // Fallback: treat as /ask
+    if (cmd === '/sessions') {
+      const sess = listSessions(user.id, 10)
+      if (!sess.length) return reply(chatId, 'Belum ada sesi web. Buka /asisten di web app dulu.')
+      const lines = sess
+        .map(s => `#${s.id} · ${s.title} _(${s.agent_id})_`)
+        .join('\n')
+      await reply(chatId, `*Sesi terakhir:*\n${lines}\n\nLanjutkan: \`/continue <id>\``)
+      return
+    }
+    if (cmd === '/continue') {
+      const id = Number(arg)
+      if (!id) return reply(chatId, 'Format: `/continue 12`')
+      const s = getSession(id)
+      if (!s || s.user_id !== user.id) return reply(chatId, 'Sesi tidak ditemukan.')
+      const msgs = listMessages(s.id).slice(-5).map(m => ({ role: m.role, content: m.content }))
+      await reply(chatId, `Lanjut sesi #${s.id} (_${s.title}_, agent ${s.agent_id}). Tulis pertanyaanmu — saya pakai 5 pesan terakhir sebagai konteks.`)
+      // Stash context so the next non-command message uses it
+      pendingContext.set(chatId, { sessionId: s.id, agentId: s.agent_id, history: msgs })
+      return
+    }
+    if (cmd === '/alerts') {
+      const alerts = listAlerts(user.id, true)
+      if (!alerts.length) return reply(chatId, 'Belum ada alert aktif. Buat via asisten AI: "Buat alert kalau BBCA di atas 10000".')
+      const lines = alerts.map(a => `#${a.id} ${a.kind.toUpperCase()} ${a.symbol} ${a.condition} ${a.target}`).join('\n')
+      await reply(chatId, `*Alert aktif:*\n${lines}`)
+      return
+    }
+    // Fallback: treat as /ask, with pending /continue context if any
     if (text.length > 1) {
       await reply(chatId, '⏳ Berpikir…')
-      const r = await runAgentChat([{ role: 'user', content: text }])
+      const pend = pendingContext.get(chatId)
+      const messages = pend
+        ? [...pend.history, { role: 'user', content: text }]
+        : [{ role: 'user', content: text }]
+      const agent = pend ? findAgent(pend.agentId) : undefined
+      const r = await runAgentChat(messages, agent ? { agent, pin: process.env.VNANSIAL_PIN || null } : { pin: process.env.VNANSIAL_PIN || null })
       await reply(chatId, (r.message || '').slice(0, 3500))
+      // Clear pending context after one use
+      if (pend) pendingContext.delete(chatId)
     }
   } catch (err) {
     console.error('[telegram] error', err)
     await reply(chatId, `Maaf, error: ${err.message}`)
   }
 }
+
+// Per-chat pending context for /continue → next message uses session history.
+const pendingContext = new Map()
 
 async function pollOnce() {
   if (!API) return
