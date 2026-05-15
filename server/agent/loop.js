@@ -35,6 +35,10 @@ function normalizeAssistantMessage(msg) {
  * agent doesn't need to pass it explicitly (and the user doesn't have to
  * paste their PIN in every message). Tools that don't need a PIN just
  * ignore the extra field.
+ *
+ * If `ctx.onProgress` is supplied, it's invoked at lifecycle moments
+ * ('thinking', 'tool_start', 'tool_done') so the caller can stream
+ * status updates (e.g. progressive Telegram message edits).
  */
 async function executeToolCalls(toolCalls, toolCallsLog, conversation, ctx = {}) {
   for (const call of toolCalls) {
@@ -50,6 +54,13 @@ async function executeToolCalls(toolCalls, toolCallsLog, conversation, ctx = {})
       args = { ...args, pin: ctx.pin }
     }
 
+    const safeArgs = { ...args }
+    if (safeArgs.pin) safeArgs.pin = '[redacted]'
+
+    if (typeof ctx.onProgress === 'function') {
+      try { await ctx.onProgress({ phase: 'tool_start', name, args: safeArgs }) } catch {}
+    }
+
     let result
     try {
       result = await runTool(name, args)
@@ -57,11 +68,17 @@ async function executeToolCalls(toolCalls, toolCallsLog, conversation, ctx = {})
       result = { error: err.message, details: err.data }
     }
 
-    // Never echo the PIN back to the model or the client
-    const safeArgs = { ...args }
-    if (safeArgs.pin) safeArgs.pin = '[redacted]'
-
     toolCallsLog.push({ name, args: safeArgs, result })
+
+    if (typeof ctx.onProgress === 'function') {
+      try {
+        await ctx.onProgress({
+          phase: 'tool_done',
+          name,
+          ok: !(result && result.error),
+        })
+      } catch {}
+    }
 
     conversation.push({
       role: 'tool',
@@ -73,8 +90,11 @@ async function executeToolCalls(toolCalls, toolCallsLog, conversation, ctx = {})
 
 export async function runAgentChat(messages, options = {}) {
   const openai = options.openai ?? createOpenAIClient()
-  const ctx = { pin: options.pin || null }
+  const ctx = { pin: options.pin || null, onProgress: options.onProgress || null }
   const agent = options.agent || findAgent(options.agentId || 'generalis')
+  if (typeof ctx.onProgress === 'function') {
+    try { await ctx.onProgress({ phase: 'thinking' }) } catch {}
+  }
   const baseExtra = ctx.pin
     ? `Konteks: user sudah unlock dengan PIN — kamu boleh memanggil tool portofolio/health. Jangan tampilkan PIN ke user.`
     : `Konteks: user belum unlock PIN. Jika user minta akses portofolio/health-history, jelaskan supaya unlock dulu di halaman /portofolio atau /kesehatan.`
