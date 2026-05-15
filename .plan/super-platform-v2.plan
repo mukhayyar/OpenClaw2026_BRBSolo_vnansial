@@ -1,0 +1,69 @@
+# Vnansial — Super Platform v2 (personal-AI direction)
+Priority: P0
+Status: in_progress
+Last updated: 2026-05-15
+
+## Goal
+Turn Vnansial from a multi-tool web app into a **personal financial AI**
+that you can run anywhere (Docker / VPS / Telegram) and that does almost
+everything from the chat surface.
+
+## Why
+The bento web app proved the surface area; now the AI needs the depth to
+truly replace 5 apps. The win condition is: "user opens chat, asks for
+anything financial, gets a tool-driven answer + chart + persistent
+memory."
+
+## Tracks
+1. **Visibility** — show the agent's tool calls inline so demo viewers
+   understand the autonomy. Already in chat data; needs polish.
+2. **Charts in chat & pages** — Yahoo + CoinGecko history rendered as
+   SVG/SSR so the AI can include `[[chart:BBCA.JK]]` in replies.
+3. **Sessions & memory** — every chat is a row in SQLite, exportable to
+   `.md`. Users can have many parallel sessions (per-agent, per-topic).
+4. **Multi-agent** — predefined presets (Investor, Pemula, Cek-Penipuan,
+   Coach) plus user-defined agents stored in SQLite with custom prompts.
+   Active agent is chosen by dropdown.
+5. **Settings page** — masked secrets (Telegram token shown as `••••`),
+   PIN-gated edits, per-user Telegram chat-id binding.
+6. **Number masking** — every currency input shows `1.000.000` not
+   `1000000`.
+7. **More crypto** — full CoinGecko search (250+ top + on-demand search
+   for any meme coin) accessible from page + AI tool.
+8. **Alerts + cron** — node-cron driven; price/event/balance alerts
+   persisted in SQLite; Telegram & in-app notifications.
+9. **CI/CD + container registry** — GitHub Actions builds + pushes to
+   `ghcr.io/mukhayyar/vnansial`. Users `docker run` with env override.
+10. **Puppeteer fallback for IDX** — optional, env-gated; bypasses
+    Cloudflare for emiten detail when JSON endpoints 403.
+11. **AI cross-channel** — the same agent reachable in Telegram, web,
+    and CLI (`scripts/vnansial-cli.js` future).
+
+## Shipped this iteration (track-by-track)
+- Track 1: tool-timeline shown in ChatUI (existing) — polish only
+- Track 2: TradingChart component + /api/market/history works; agent
+  tool `render_chart` returns chart spec for inline rendering
+- Track 3: SQLite `session` + `message` tables, `/api/sessions/*` CRUD,
+  client session picker, `.md` export endpoint
+- Track 4: `server/agent/presets.js`, SQLite `agent` table, agent
+  dropdown in ChatUI, system prompt swap per turn
+- Track 5: `/settings` page with masked Telegram, PIN-gated POST
+- Track 6: `formatIDR()` + `<MoneyInput>` component applied site-wide
+- Track 7: `/api/crypto/search` endpoint via CoinGecko `/search`
+- Track 8: `node-cron` + `alert` table + alert CRUD scaffolded (no
+  notification daemon yet — flag-gated to ship)
+- Track 9: `.github/workflows/release.yml` builds Docker, pushes to ghcr
+- Track 10: Puppeteer scaffold + env flag (heavy dep, opt-in only)
+- Track 11: agent reachable in Telegram already; CLI deferred
+
+## Roadmap (not in this iteration)
+- Inline streaming SSE tool calls
+- True multi-agent communication (agent-to-agent handoff with
+  scratchpad shared state)
+- Push notifications via service worker
+- Family / household profiles
+- Mobile PWA installer
+
+## How AI agents extend this
+See `CLAUDE.md` / `AGENTS.md` — every new domain follows the same recipe
+(lib → tool wrapper → definition → endpoint → page).

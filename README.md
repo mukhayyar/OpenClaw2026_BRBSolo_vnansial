@@ -2,149 +2,159 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-**Multi-tool AI financial guardian for Indonesia** — literasi keuangan, cek investasi bodong, kalkulator pinjaman, dan asisten AI dengan **tool calling** (SumoPod).
+**Platform literasi keuangan all-in-one untuk Indonesia.** Skor kesehatan
+finansial, saham IDX, crypto, asuransi, portofolio, pinjaman, cek
+rekening + nomor penipu, dan asisten AI dengan tool-calling — semuanya
+dalam satu antarmuka tenang ala Apple, bento style, hijau alam. Open
+source, self-hostable, gratis.
 
 > *Jangan sampai uangmu hilang karena kurang informasi.*
 
-**OpenClaw Agenthon 2026** · Team: **BRBSolo** · Repo: [`OpenClaw2026_BRBSolo_vnansial`](https://github.com/mukhayyar/OpenClaw2026_BRBSolo_vnansial)
+**🌱 Live demo:** **https://vnansial.mukhayyar.my.id/**
+**Repo:** https://github.com/mukhayyar/OpenClaw2026_BRBSolo_vnansial
+**Team:** BRBSolo · OpenClaw Agenthon 2026
+
+**Docs for contributors:** [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md) · [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`DEPLOYMENT.md`](DEPLOYMENT.md) · [`presentation.md`](presentation.md)
 
 ---
 
-## Problem & solution
+## What's inside
 
-| Masalah (Indonesia) | Solusi Vnansial |
-|---------------------|-----------------|
-| Investasi bodong & entitas ilegal (SWI/OJK) | Halaman **Cek Investasi** + tool `check_investment_company` |
-| Pinjol predator & bunga tersembunyi | **Kalkulator Pinjaman** + tool `calculate_loan` |
-| Korban penipuan tidak tahu lapor ke mana | **Lapor Penipuan** + tool `get_fraud_report_guide` |
-| Literasi keuangan rendah | **Edukasi** (quiz & tips) |
-| Butuh jawaban cepat & panduan | **Asisten AI** dengan loop tool calling (SumoPod) |
-
-**Visi produk (roadmap):** money psychology, judi online prevention, dataset Waspada Investasi (SQLite), multi-agent orchestrator. Lihat [Roadmap](#roadmap--openclaw-agenthon) di bawah.
+| Domain | Page | What it does |
+|--------|------|--------------|
+| **Diagnosis** | `/kesehatan` | 0–100 financial-wellness score from 4 pillars (budget, emergency fund, debt, savings) |
+| **IDX saham** | `/emiten` | Cek emiten Indonesia: profil, dividen, ESG, pemegang saham, kalender |
+| **Crypto** | `/crypto` | Live CoinGecko + scam-risk heuristic (umur, market cap, volume, daftar scam) |
+| **Asuransi** | `/asuransi` | Bandingkan BPJS, Prudential, AIA, Allianz, Manulife, Sinar Mas, Garda Oto, AXA Mandiri + premium calculator + rekomendasi personal |
+| **Portofolio** | `/portofolio` | Saham, crypto, reksadana, obligasi, logam — **live price**, cost-basis, gain/loss. Dana darurat, money buffer, tabungan tujuan (custom + isComplete/isUsed), cashflow harian |
+| **Edukasi** | `/edukasi` | Sub-tab: Quiz, Tips, **Kalkulator pinjaman** (anuitas vs flat, KUR vs pinjol vs rentenir) |
+| **Verifikasi** | `/cek-investasi` | Cek izin OJK + checklist 8 red-flag investasi bodong |
+| **Rencana** | `/rencana-investasi` | Target tabungan, alokasi aset, harga pasar Yahoo Finance |
+| **Lapor** | `/lapor` | Cek rekening (cekrekening.id) + cek nomor HP (aduannomor.id) + 5-step panduan lapor + 5 hotline + template surat |
+| **Asisten AI** | `/asisten` | Chat dengan tool calling (16 tool). Bisa baca/tulis portofolio kamu (PIN-gated). |
+| **Telegram bot** | env-gated | `/score /quote /crypto /emiten /ask /portofolio` — opsional |
 
 ---
 
-## OpenClaw Agenthon 2026 — compliance status
+## Why this exists (the personal story)
+
+Lihat **[`presentation.md`](presentation.md) Slide 1.5** untuk cerita lengkap.
+Singkatnya: dibangun oleh mahasiswa tahun akhir yang panik soal keuangan
+sendiri, lalu sadar separuh Indonesia di posisi yang sama. Vnansial adalah
+"app yang dulu pengen gue download umur 18."
+
+---
+
+## OpenClaw Agenthon 2026 — compliance
 
 | Requirement | Status | Where in code |
 |-------------|--------|----------------|
-| **Tool calling** | ✅ Implemented | `server/agent/loop.js` — OpenAI-compatible `tools` + `tool` role messages |
-| **Autonomous loop** | ✅ Partial | Same file: up to **8** LLM↔tool rounds **without** user input between tool calls in one chat request |
-| **Multi-agent system** | ⏳ Planned | Today: **single** agent with all tools; orchestrator/specialists not yet in repo |
-| **Public deployable** | ✅ Documented | [Quick start](#quick-start), [Docker](#docker), [Public deployment](#public-deployment) |
-| **Not a basic chatbot** | ✅ | Agent invokes calculators, OJK demo lookup, fraud guide, market/planner tools dynamically |
-
-### How autonomy works today
-
-```mermaid
-sequenceDiagram
-  participant U as User (/asisten)
-  participant API as POST /api/agent/chat
-  participant L as SumoPod LLM
-  participant T as Tools (server/tools)
-
-  U->>API: messages[]
-  loop max 8 iterations
-    API->>L: conversation + tool definitions
-    alt model returns tool_calls
-      L-->>API: tool_calls
-      API->>T: runTool(name, args)
-      T-->>API: JSON result
-      API->>L: role=tool messages
-    else final text
-      L-->>API: assistant content
-      API-->>U: message + toolCalls log
-    end
-  end
-```
-
-**Demo tip for judges:** Ask one compound question on `/asisten` (e.g. *"Cek Binomo dan hitung cicilan pinjaman 5 juta bunga 24% 12 bulan"*) — the agent should call multiple tools in one request without you clicking between steps.
+| **Tool calling** | ✅ | `server/agent/loop.js` — OpenAI-compatible `tools` + `tool` role messages |
+| **Autonomous loop** | ✅ | Up to 8 LLM↔tool rounds per chat request, tanpa interaksi user di tengah |
+| **Multi-tool agent** | ✅ | 18 tools registered: health, IDX (4), crypto (2), insurance (3), OJK, loan, fraud guide, market (2), allocation, portfolio (4), scam-check (2) |
+| **Live demo deployable** | ✅ | https://vnansial.mukhayyar.my.id/ |
+| **Not a basic chatbot** | ✅ | Agent invokes IDX, CoinGecko, scam DB, SQLite portfolio CRUD dynamically |
+| **Open source** | ✅ | Apache 2.0, self-hostable, BYO AI provider |
 
 ---
 
-## Architecture (current)
+## Architecture
 
 ```mermaid
 flowchart TB
-  subgraph Frontend["React 19 + Vite"]
-    L[Landing /]
-    C[Cek Investasi]
-    K[Kalkulator]
-    E[Edukasi]
-    P[Lapor Penipuan]
-    A[Asisten AI /asisten]
+  subgraph Frontend["React 19 + Vite + Tailwind v4 (bento UI)"]
+    L[Landing]
+    K[Kesehatan]
+    E[Emiten · Crypto · Asuransi]
+    P[Portofolio]
+    A[Asisten AI]
+    LP[Lapor Penipuan]
   end
 
   subgraph API["Express 5 — server/index.js"]
     H[GET /api/health]
     CH[POST /api/agent/chat]
+    SC[GET /api/scam/*]
+    IDX[GET /api/idx/*]
+    CG[GET /api/crypto/*]
+    INS[POST /api/insurance/*]
+    ME["/api/me/* (PIN-gated)"]
   end
 
   subgraph Agent["server/agent/loop.js"]
     SP[systemPrompt.js]
-    TD[tools/definitions.js]
     TR[tools/runner.js]
   end
 
-  subgraph Tools["server/tools"]
-    V[vnansial.js]
-    M[market.js / planner.js]
+  subgraph Persistence
+    SQ[(SQLite via better-sqlite3<br/>user · holding · buffer · health)]
   end
 
   subgraph External["External APIs"]
-    S[SumoPod OpenAI-compatible]
+    S[OpenAI-compatible LLM<br/>SumoPod default, BYO supported]
     Y[Yahoo Finance]
+    I[idx.co.id]
+    C[CoinGecko]
+    CR[cekrekening.id]
+    AN[aduannomor.id]
+    TG[Telegram Bot API]
   end
 
   A --> CH
   CH --> Agent
-  TR --> V
-  TR --> M
   Agent --> S
-  M --> Y
-  C --> DemoMap[server/data/ojk.js — 8 entitas demo]
+  Agent --> TR
+  TR --> Y & I & C & CR & AN
+  ME --> SQ
+  TR --> SQ
+  P --> ME
+  K --> ME
+  E --> IDX & CG
+  LP --> SC
+  TG -. polling .-> Agent
 ```
 
-**Planned (not in repo yet):** Orchestrator + Investigator / Analyst / Guardian / Coach agents, `POST /api/agent/run`, UI `/agen`, SQLite Waspada CSV (~11k rows).
+---
+
+## AI providers — bring your own
+
+Default = **SumoPod** (Indonesian inference, free credits, low latency for
+ID users). The OpenAI SDK shim accepts any compatible endpoint:
+
+| Provider | Set in `.env` |
+|----------|---------------|
+| SumoPod (default) | `SUMOPOD_BASE_URL=https://ai.sumopod.com/v1` `SUMOPOD_MODEL=qwen3.6-flash` |
+| OpenAI | `SUMOPOD_BASE_URL=https://api.openai.com/v1` `SUMOPOD_MODEL=gpt-4o-mini` |
+| OpenRouter | `SUMOPOD_BASE_URL=https://openrouter.ai/api/v1` `SUMOPOD_MODEL=anthropic/claude-3.5-haiku` |
+| Local Ollama | `SUMOPOD_BASE_URL=http://localhost:11434/v1` `SUMOPOD_MODEL=llama3.2` |
+| Any OpenAI-compatible | …same pattern |
+
+The `SUMOPOD_*` env names are historical; treat them as `LLM_*`.
 
 ---
 
-## Features & routes
+## Privacy: PIN-gated personal data
 
-| Route | Description |
-|-------|-------------|
-| `/` | Landing, stats, feature cards |
-| `/asisten` | AI chat — calls `POST /api/agent/chat` |
-| `/cek-investasi` | Search demo OJK map + red-flag checklist (client-side) |
-| `/kalkulator` | Loan calculator (anuitas / flat) |
-| `/edukasi` | Quiz + financial tips |
-| `/lapor` | Fraud reporting step-by-step guide |
+Personal endpoints (`/api/me/*`) and SQLite-backed agent tools (portfolio
+CRUD, health snapshots) require a PIN match against `VNANSIAL_PIN` in
+`.env`. The web client stores the PIN only in `sessionStorage` (cleared
+when the tab closes). The PIN is **never** sent to the LLM as part of the
+conversation — the server injects it server-side into tool args and
+redacts it from the chat log.
 
----
-
-## Tech stack
-
-| Layer | Technology |
-|-------|------------|
-| UI | React 19, React Router 7, Framer Motion, Tailwind CSS 4 |
-| Build | Vite 8, TypeScript |
-| API | Express 5, CORS, ESM (`"type": "module"`) |
-| AI | `openai` SDK → **SumoPod** (`SUMOPOD_BASE_URL`, `gpt-4o-mini`) |
-| Market data | **Yahoo Finance** via `yahoo-finance2` (mock in CI) |
-| Deploy | Docker (Node serves `dist/` + API on one port) |
+Without a PIN configured, the app runs in **dev mode** (open), with a
+warning at startup. Always set a PIN in production.
 
 ---
 
 ## Quick start
 
-**Prerequisites:** Node.js 20+, npm, git
-
 ```bash
-git clone git@github.com:mukhayyar/OpenClaw2026_BRBSolo_vnansial.git
-cd OpenClaw2026_BRBSolo_vnansial
-cp .env.example .env
-# Edit .env — set SUMOPOD_API_KEY (required)
+git clone https://github.com/mukhayyar/OpenClaw2026_BRBSolo_vnansial.git vnansial
+cd vnansial
+cp .env.example .env       # fill SUMOPOD_API_KEY + VNANSIAL_PIN
 npm install
+npm install better-sqlite3 # optional — enables persistence
 npm run dev
 ```
 
@@ -159,8 +169,55 @@ Production build:
 ```bash
 npm run build
 npm start
-# → http://localhost:3001 (static + API)
+# Single port → http://localhost:3001
 ```
+
+---
+
+## Docker
+
+### Pull from GitHub Container Registry (recommended)
+
+```bash
+# Latest main
+docker pull ghcr.io/mukhayyar/vnansial:latest
+
+# Custom env via CLI flags (no .env file needed)
+docker run -d --name vnansial \
+  -p 3001:3001 \
+  -v vnansial_data:/data \
+  -e SUMOPOD_API_KEY=sk-your-key \
+  -e VNANSIAL_PIN=842913 \
+  -e VNANSIAL_DB_PATH=/data/vnansial.db \
+  -e TELEGRAM_BOT_TOKEN=optional-token \
+  --restart unless-stopped \
+  ghcr.io/mukhayyar/vnansial:latest
+
+# Or with an env file (anywhere on disk)
+docker run -d --name vnansial -p 3001:3001 \
+  -v vnansial_data:/data \
+  --env-file /etc/vnansial.env \
+  --restart unless-stopped \
+  ghcr.io/mukhayyar/vnansial:latest
+```
+
+CI publishes multi-arch (amd64 + arm64) images on every push to `main`
+and on tagged releases (`v1.2.3`). See [`.github/workflows/release.yml`](.github/workflows/release.yml).
+
+### Build locally
+
+```bash
+docker compose up -d
+# Persistent volume: vnansial_data → /data (SQLite lives here)
+# Health probe built into the container
+```
+
+See [`docker-compose.yml`](docker-compose.yml) and [`Dockerfile`](Dockerfile).
+The Dockerfile compiles `better-sqlite3` from source so persistence works
+out of the box.
+
+For VPS deployment (Sumopod, Jetorbit, generic Ubuntu) see
+[`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ---
 
@@ -168,177 +225,86 @@ npm start
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SUMOPOD_API_KEY` | **Yes** (for AI) | API key from SumoPod |
-| `SUMOPOD_BASE_URL` | No | Default `https://ai.sumopod.com/v1` |
-| `SUMOPOD_MODEL` | No | Default `gpt-4o-mini` |
-| `YAHOO_MOCK` | No | Set `1` for offline/CI mock market quotes |
+| `SUMOPOD_API_KEY` | **Yes** | API key for any OpenAI-compatible provider |
+| `SUMOPOD_BASE_URL` | No | Provider base URL (default SumoPod) |
+| `SUMOPOD_MODEL` | No | Default `qwen3.6-flash` |
+| `VNANSIAL_PIN` | **Recommended** | Locks `/api/me/*` and SQLite agent tools |
+| `VNANSIAL_DB_PATH` | No | Override SQLite location |
+| `TELEGRAM_BOT_TOKEN` | No | Activates Telegram polling bot |
+| `YAHOO_MOCK` | No | `1` for offline/CI mocks |
 | `PORT` | No | Default `3001` |
-| `VNANSIAL_PUBLIC_URL` | No | Public site URL for metadata/links |
-| `VITE_API_URL` | No | Leave empty in dev (Vite proxies `/api` → 3001) |
+| `VITE_API_URL` | No | Leave empty in dev (Vite proxies `/api`) |
 
-**Never commit `.env`.** See `.env.example`.
-
----
-
-## API reference
-
-### `GET /api/health`
-
-```json
-{
-  "ok": true,
-  "service": "vnansial-api",
-  "sumopod": true,
-  "model": "qwen3.6-flash"
-}
-```
-
-### `POST /api/agent/chat`
-
-Conversational agent with autonomous tool loop (max 8 tool rounds per request).
-
-**Body:**
-
-```json
-{
-  "messages": [
-    { "role": "user", "content": "Cek Binomo dan jelaskan risikonya" }
-  ]
-}
-```
-
-**Response:**
-
-```json
-{
-  "message": "…",
-  "toolCalls": [
-    { "name": "check_investment_company", "args": { "companyName": "binomo" }, "result": { } }
-  ],
-  "usage": { }
-}
-```
-
-**Code:** `server/index.js` → `server/agent/loop.js`
-
-### Not implemented yet
-
-- `POST /api/agent/run` — goal-based autonomous multi-agent run
-- `GET /api/investasi/search?q=` — Waspada SQLite search
+Never commit `.env`. See [`.env.example`](.env.example).
 
 ---
 
-## Demo scenarios (copy-paste for `/asisten` or API)
+## API reference (excerpt)
 
-Use these as **single user messages** in the chat UI or as the last message in `POST /api/agent/chat`:
+### Public
 
-1. **Investigation:**  
-   `Investigasi lengkap entitas Binomo: cek status di database, red flag yang relevan, dan langkah jika sudah tertipu.`
+- `GET /api/health` — health + driver state
+- `GET /api/agent/test` — ping the LLM
+- `GET /api/market/{quote,search,history}` — Yahoo Finance
+- `GET /api/idx/emiten` — list emiten (live or curated fallback)
+- `GET /api/idx/{profile,dividen,financial,esg,pemegang,calendar}/:code`
+- `GET /api/idx/:code` — composite overview
+- `GET /api/crypto/{top,coin,risk}` — CoinGecko + scam scoring
+- `GET /api/scam/{rekening,nomor}` — cekrekening.id / aduannomor.id
+- `GET /api/insurance` + `POST /api/insurance/{premium,recommend}`
+- `POST /api/health/score` — stateless scoring (no PIN)
+- `POST /api/me/auth/check` — PIN verification
 
-2. **Loan + risk:**  
-   `Hitung cicilan pinjaman Rp 10.000.000 bunga 36% per tahun tenor 12 bulan metode anuitas, lalu jelaskan apakah ini predator.`
+### PIN-gated (`x-vnansial-pin` header required when `VNANSIAL_PIN` is set)
 
-3. **Investment plan:**  
-   `Simulasikan target tabungan Rp 50 juta dalam 24 bulan dengan iuran Rp 1,5 juta/bulan dan return 8% per tahun, lalu sarankan alokasi balanced.`
+- `POST /api/me/health` — save health snapshot
+- `GET /api/me/health/history`
+- `GET /api/me/portfolio`
+- `POST/DELETE /api/me/portfolio/holding`
+- `POST /api/me/portfolio/buffer`
 
-**curl example:**
+### Agent chat
+
+`POST /api/agent/chat` with body `{ messages, pin? }` or `x-vnansial-pin`
+header. Returns `{ message, toolCalls, model }`.
+
+---
+
+## Tests
 
 ```bash
-curl -s http://localhost:3001/api/agent/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Cek Binomo"}]}'
+npm test       # vitest run — 32+ cases across server tools
 ```
 
 ---
 
-## Waspada Investasi / SQLite
+## Tech stack
 
-**Status: not integrated in current codebase.**
-
-- UI **Cek Investasi** uses a small hardcoded map in `server/data/ojk.js` (exact name match only).
-- Planned: import [OJK Waspada Investasi Alert Portal](https://www.ojk.go.id) CSV → `public/data/waspada.sqlite` via build script + `GET /api/investasi/search`.
-
-Until then, advise users to verify at [sikapiuangmu.ojk.go.id](https://sikapiuangmu.ojk.go.id).
-
----
-
-## Docker
-
-```bash
-docker build -t vnansial .
-docker run -p 3001:3001 --env-file .env vnansial
-```
-
-Open http://localhost:3001 — Express serves built frontend + API.
+| Layer | Technology |
+|-------|------------|
+| UI | React 19, React Router 7, Framer Motion, Tailwind CSS 4 |
+| Build | Vite 8, TypeScript |
+| API | Express 5, CORS, ESM |
+| AI | `openai` SDK — any OpenAI-compatible provider (SumoPod default) |
+| Persistence | `better-sqlite3` (optional, with in-memory fallback) |
+| Market data | Yahoo Finance (`yahoo-finance2`), CoinGecko, IDX proxy |
+| Scam DB | cekrekening.id, aduannomor.id |
+| Messaging | Telegram Bot API (polling, optional) |
+| Deploy | Docker / docker-compose / VPS + systemd + nginx |
 
 ---
 
-## Public deployment
+## Contributing
 
-### Render (example)
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md). New tools / pages must follow
+the pattern documented in [`CLAUDE.md`](CLAUDE.md) (canonical) or
+[`AGENTS.md`](AGENTS.md) (non-Claude AI agents).
 
-1. New **Web Service** → connect repo  
-2. **Build:** `npm ci && npm run build`  
-3. **Start:** `npm start`  
-4. Set env vars in dashboard (same as `.env.example`)  
-5. **Live URL:** `https://vnansial.onrender.com` _(placeholder — set after deploy)_
-
-### Fly.io (example)
-
-```bash
-fly launch
-fly secrets set SUMOPOD_API_KEY=...
-fly deploy
-```
-
-### Railway
-
-Connect repo → set start command `npm start` → add environment variables from `.env.example`.
+Plan-driven workflow: `.plan/*.plan` + `.progress/*.progress` files
+narrate in-flight work so AI agents and humans can hand off cleanly.
 
 ---
-
-## Demo video checklist (≈2 min for judges)
-
-1. **0:00–0:20** — Problem: investasi bodong / pinjol (Landing stats)  
-2. **0:20–0:50** — Cek Investasi: search `Binomo` → ilegal; red-flag checklist  
-3. **0:50–1:20** — Asisten AI: one compound prompt → show **tool calls** in UI expander  
-4. **1:20–1:40** — Kalkulator or Edukasi quiz (quick)  
-5. **1:40–2:00** — `GET /api/health`, `/rencana-investasi`, roadmap multi-agent  
-
----
-
-## Roadmap / OpenClaw Agenthon
-
-- [ ] Multi-agent orchestrator (`POST /api/agent/run`, `/agen` UI)  
-- [ ] Waspada Investasi SQLite (~11k entities)  
-- [ ] Pages: `/psikologi-uang`, `/waspada-judi`  
-- [ ] `docs/ARCHITECTURE.md` for specialist agents  
-
-Details: `AGENT.md`, `presentation.md`.
-
----
-
-## Submission
-
-| Item | Value |
-|------|--------|
-| Devpost | _(add your submission URL)_ |
-| Repo | `git@github.com:mukhayyar/OpenClaw2026_BRBSolo_vnansial.git` |
-| Demo URL | _(add after deploy)_ |
-
-**Devpost one-liner:**  
-*Vnansial is a free Indonesian financial guardian: interactive fraud tools plus an AI agent that autonomously chains SumoPod tool calls to investigate scams, calculate predatory loans, and plan educational savings goals.*
-
----
-
-## Disclaimer
-
-Vnansial is **educational software**, not licensed financial, legal, or investment advice. Always verify entities on official OJK/BI channels before transferring money.
 
 ## License
 
-Copyright © 2026 **BRBSolo**
-
-This project is licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for the full text.
-
-You may use, modify, and distribute this software in accordance with the License. This software is provided **without warranty**; see the License for limitations on liability.
+Apache 2.0. See [`LICENSE`](LICENSE).

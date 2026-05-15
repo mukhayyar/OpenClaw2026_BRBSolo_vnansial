@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { GlassPanel } from '../components/PageShell'
+import PageShell from '../components/PageShell'
+import Bento from '../components/Bento'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -16,7 +16,6 @@ type Quote = {
 type Holding = { symbol: string; shares: number }
 
 const PORTFOLIO_KEY = 'vnansial-paper-portfolio'
-
 const EXAMPLES = ['BBCA.JK', 'BBRI.JK', 'AAPL', 'MSFT', '^JKSE']
 
 function fmt(n: number, currency = 'IDR') {
@@ -33,8 +32,8 @@ function Sparkline({ points }: { points: { close: number }[] }) {
   const vals = points.map(p => p.close)
   const min = Math.min(...vals)
   const max = Math.max(...vals)
-  const w = 120
-  const h = 36
+  const w = 160
+  const h = 48
   const path = vals
     .map((v, i) => {
       const x = (i / (vals.length - 1 || 1)) * w
@@ -43,8 +42,8 @@ function Sparkline({ points }: { points: { close: number }[] }) {
     })
     .join(' ')
   return (
-    <svg width={w} height={h} className="text-cyan-400">
-      <path d={path} fill="none" stroke="currentColor" strokeWidth="2" />
+    <svg width={w} height={h} className="text-[var(--vn-forest)]">
+      <path d={path} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   )
 }
@@ -82,12 +81,11 @@ export default function RencanaInvestasi() {
   }, [target, months, monthly, returnPct])
 
   const allocation = useMemo(() => {
-    const m = {
+    return {
       conservative: { cash: 30, bonds: 40, stocks: 20, alt: 10 },
       balanced: { cash: 15, bonds: 35, stocks: 40, alt: 10 },
       aggressive: { cash: 5, bonds: 15, stocks: 70, alt: 10 },
     }[risk]
-    return m
   }, [risk])
 
   useEffect(() => {
@@ -97,28 +95,40 @@ export default function RencanaInvestasi() {
   useEffect(() => {
     if (!holdings.length) return
     holdings.forEach(async h => {
-      const res = await fetch(`${API}/api/market/quote?symbol=${encodeURIComponent(h.symbol)}`)
-      const data = await res.json()
-      setPortfolioQuotes(q => ({ ...q, [h.symbol]: data }))
+      try {
+        const res = await fetch(`${API}/api/market/quote?symbol=${encodeURIComponent(h.symbol)}`)
+        const data = await res.json()
+        setPortfolioQuotes(q => ({ ...q, [h.symbol]: data }))
+      } catch {
+        // ignore offline
+      }
     })
   }, [holdings])
 
   async function loadQuote(sym: string) {
     setSymbol(sym)
-    const [qRes, hRes] = await Promise.all([
-      fetch(`${API}/api/market/quote?symbol=${encodeURIComponent(sym)}`),
-      fetch(`${API}/api/market/history?symbol=${encodeURIComponent(sym)}&range=3mo`),
-    ])
-    setQuote(await qRes.json())
-    const hist = await hRes.json()
-    setHistory(hist.points || [])
+    try {
+      const [qRes, hRes] = await Promise.all([
+        fetch(`${API}/api/market/quote?symbol=${encodeURIComponent(sym)}`),
+        fetch(`${API}/api/market/history?symbol=${encodeURIComponent(sym)}&range=3mo`),
+      ])
+      setQuote(await qRes.json())
+      const hist = await hRes.json()
+      setHistory(hist.points || [])
+    } catch {
+      setQuote({ symbol: sym, error: 'Server tidak tersambung' })
+    }
   }
 
   async function doSearch() {
     if (!searchQ.trim()) return
-    const res = await fetch(`${API}/api/market/search?q=${encodeURIComponent(searchQ)}`)
-    const data = await res.json()
-    setSearchResults(data.results || [])
+    try {
+      const res = await fetch(`${API}/api/market/search?q=${encodeURIComponent(searchQ)}`)
+      const data = await res.json()
+      setSearchResults(data.results || [])
+    } catch {
+      setSearchResults([])
+    }
   }
 
   const portfolioValue = holdings.reduce((sum, h) => {
@@ -128,140 +138,135 @@ export default function RencanaInvestasi() {
   }, 0)
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="page-shell max-w-5xl"
+    <PageShell
+      eyebrow="Pertumbuhan"
+      title="Rencana investasi yang sabar dan masuk akal."
+      subtitle="Simulasi target tabungan, alokasi aset edukasi, dan harga pasar real-time (delayed). Bukan saran investasi berlisensi OJK."
     >
-      <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-cyan-300 to-emerald-300 bg-clip-text text-transparent">
-        📈 Rencana Investasi
-      </h1>
-      <p className="text-slate-400 mb-6 text-sm">
-        Perencanaan edukasi + data pasar Yahoo Finance (delayed). Bukan saran investasi berlisensi OJK.
-      </p>
-
-      <div className="glass rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 mb-8 text-sm text-amber-200">
-        ⚠️ <strong>Disclaimer:</strong> Simulasi dan kutipan harga untuk edukasi saja. Data dapat tertunda.
-        Tidak menjamin return. Verifikasi di broker resmi &amp; OJK sebelum berinvestasi.
-      </div>
-
-      <motion.div className="grid lg:grid-cols-2 gap-6 mb-8">
-        <GlassPanel className="space-y-4">
-          <h2 className="text-lg font-bold">🎯 Perencana Tujuan</h2>
-          <label className="block text-sm text-slate-400">
-            Target (Rp)
-            <input
-              type="number"
-              value={target}
-              onChange={e => setTarget(Number(e.target.value))}
-              className="mt-1 w-full input-glass rounded-lg px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm text-slate-400">
-            Bulan
-            <input
-              type="number"
-              value={months}
-              onChange={e => setMonths(Number(e.target.value))}
-              className="mt-1 w-full input-glass rounded-lg px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm text-slate-400">
-            Iuran bulanan (Rp)
-            <input
-              type="number"
-              value={monthly}
-              onChange={e => setMonthly(Number(e.target.value))}
-              className="mt-1 w-full input-glass rounded-lg px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm text-slate-400">
-            Return tahunan asumsi (%)
-            <input
-              type="number"
-              value={returnPct}
-              onChange={e => setReturnPct(Number(e.target.value))}
-              className="mt-1 w-full input-glass rounded-lg px-3 py-2"
-            />
-          </label>
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        <Bento padding="lg" tone="cream">
+          <p className="vn-eyebrow mb-3">Perencana tujuan</p>
+          <h3 className="vn-headline text-[22px] mb-5">Target tabungan kamu.</h3>
+          <div className="space-y-4">
+            <label className="block text-[13px] text-[var(--vn-ink-soft)]">
+              Target (Rp)
+              <input type="number" value={target} onChange={e => setTarget(Number(e.target.value))} className="vn-input mt-1" />
+            </label>
+            <label className="block text-[13px] text-[var(--vn-ink-soft)]">
+              Tenor (bulan)
+              <input type="number" value={months} onChange={e => setMonths(Number(e.target.value))} className="vn-input mt-1" />
+            </label>
+            <label className="block text-[13px] text-[var(--vn-ink-soft)]">
+              Iuran bulanan (Rp)
+              <input type="number" value={monthly} onChange={e => setMonthly(Number(e.target.value))} className="vn-input mt-1" />
+            </label>
+            <label className="block text-[13px] text-[var(--vn-ink-soft)]">
+              Asumsi return tahunan (%)
+              <input type="number" value={returnPct} onChange={e => setReturnPct(Number(e.target.value))} className="vn-input mt-1" />
+            </label>
+          </div>
           <div
-            className={`p-4 rounded-xl border ${
+            className={`mt-5 p-4 rounded-2xl border ${
               goal.onTrack
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                ? 'bg-[var(--vn-cream)] border-[var(--vn-forest)]/20 text-[var(--vn-forest-dark)]'
+                : 'bg-[var(--vn-amber-soft)] border-[var(--vn-amber)]/20 text-[#92400e]'
             }`}
           >
-            <p>Proyeksi akhir: <strong>{fmt(goal.projected)}</strong></p>
-            <p>{goal.onTrack ? '✅ On track' : `Kurang ~${fmt(goal.gap)}`}</p>
+            <p className="text-[13px] mb-1">Proyeksi akhir</p>
+            <p className="vn-headline text-[22px]">{fmt(goal.projected)}</p>
+            <p className="text-[13px] mt-1">
+              {goal.onTrack ? '✓ Sesuai target' : `Masih kurang ~${fmt(goal.gap)}`}
+            </p>
           </div>
-        </GlassPanel>
+        </Bento>
 
-        <GlassPanel className="space-y-4">
-          <h2 className="text-lg font-bold">⚖️ Alokasi Aset (edukasi)</h2>
-          <div className="flex gap-2 flex-wrap">
+        <Bento padding="lg">
+          <p className="vn-eyebrow mb-3">Alokasi aset (edukasi)</p>
+          <h3 className="vn-headline text-[22px] mb-5">Profil risiko.</h3>
+          <div className="flex gap-2 mb-6 flex-wrap">
             {(['conservative', 'balanced', 'aggressive'] as const).map(r => (
               <button
                 key={r}
-                type="button"
                 onClick={() => setRisk(r)}
-                className={`px-3 py-2 rounded-lg text-sm capitalize btn-glass ${
-                  risk === r ? 'border-emerald-500/50 text-emerald-400' : ''
+                className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${
+                  risk === r
+                    ? 'bg-[var(--vn-forest)] text-white'
+                    : 'bg-[var(--vn-bg-deep)] text-[var(--vn-ink-soft)]'
                 }`}
               >
-                {r}
+                {r === 'conservative' ? 'Konservatif' : r === 'balanced' ? 'Seimbang' : 'Agresif'}
               </button>
             ))}
           </div>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-3">
             {Object.entries(allocation).map(([k, v]) => (
-              <div key={k} className="flex items-center gap-2">
-                <span className="w-16 capitalize text-slate-400">{k}</span>
-                <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500" style={{ width: `${v}%` }} />
+              <div key={k}>
+                <div className="flex justify-between text-[13px] mb-1.5">
+                  <span className="capitalize">{k === 'alt' ? 'Alternatif' : k === 'cash' ? 'Kas' : k === 'bonds' ? 'Obligasi' : 'Saham'}</span>
+                  <span className="font-semibold text-[var(--vn-forest-dark)]">{v}%</span>
                 </div>
-                <span className="w-10 text-right">{v}%</span>
+                <div className="h-2 rounded-full bg-[var(--vn-bg-deep)] overflow-hidden">
+                  <div
+                    className="h-full transition-all duration-700"
+                    style={{
+                      width: `${v}%`,
+                      background: 'linear-gradient(90deg, #4f9d63 0%, #2f7d3a 100%)',
+                    }}
+                  />
+                </div>
               </div>
             ))}
           </div>
-        </GlassPanel>
-      </motion.div>
+        </Bento>
+      </div>
 
-      <GlassPanel className="mb-8 space-y-4">
-        <h2 className="text-lg font-bold">📊 Kutipan Live (Yahoo Finance)</h2>
-        <div className="flex flex-wrap gap-2">
+      <Bento padding="lg" className="mb-8">
+        <p className="vn-eyebrow mb-3">Harga pasar (Yahoo Finance · delayed)</p>
+        <h3 className="vn-headline text-[22px] mb-5">Cek harga real-time.</h3>
+
+        <div className="flex flex-wrap gap-2 mb-4">
           {EXAMPLES.map(s => (
-            <button key={s} type="button" onClick={() => loadQuote(s)} className="text-xs btn-glass px-3 py-1.5 rounded-full">
+            <button
+              key={s}
+              onClick={() => loadQuote(s)}
+              className="text-[12px] px-3 py-1.5 rounded-full bg-[var(--vn-bg-deep)] hover:bg-[var(--vn-cream)] transition-colors"
+            >
               {s}
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
           <input
             value={symbol}
             onChange={e => setSymbol(e.target.value.toUpperCase())}
             placeholder="Simbol: BBCA.JK, AAPL"
-            className="flex-1 input-glass rounded-lg px-3 py-2"
+            className="vn-input"
           />
-          <button type="button" onClick={() => loadQuote(symbol)} className="btn-neon px-4 py-2 rounded-lg text-sm">
+          <button onClick={() => loadQuote(symbol)} className="vn-btn vn-btn-primary !py-2.5">
             Cek
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <input
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
             placeholder="Cari nama saham…"
-            className="flex-1 input-glass rounded-lg px-3 py-2"
+            className="vn-input"
           />
-          <button type="button" onClick={doSearch} className="btn-glass px-4 py-2 rounded-lg text-sm">
+          <button onClick={doSearch} className="vn-btn vn-btn-secondary !py-2.5">
             Cari
           </button>
         </div>
+
         {searchResults.length > 0 && (
-          <ul className="text-sm space-y-1">
+          <ul className="text-[13px] space-y-1 mb-4">
             {searchResults.map(r => (
               <li key={r.symbol}>
-                <button type="button" className="text-cyan-400 hover:underline" onClick={() => loadQuote(r.symbol)}>
+                <button
+                  className="text-[var(--vn-forest)] hover:underline"
+                  onClick={() => loadQuote(r.symbol)}
+                >
                   {r.symbol}
                 </button>
                 {' — '}
@@ -270,74 +275,101 @@ export default function RencanaInvestasi() {
             ))}
           </ul>
         )}
+
         {quote && !quote.error && (
-          <div className="flex flex-wrap items-center gap-6 p-4 rounded-xl glass-neon border border-cyan-500/20">
+          <div className="flex flex-wrap items-center gap-6 p-5 rounded-2xl bg-[var(--vn-bg-soft)] border border-[var(--vn-line)]">
             <div>
-              <p className="text-2xl font-bold">{quote.shortName}</p>
-              <p className="text-slate-500 font-mono text-sm">{quote.symbol}</p>
+              <p className="vn-headline text-[20px]">{quote.shortName}</p>
+              <p className="text-[var(--vn-muted)] font-mono text-[12px]">{quote.symbol}</p>
             </div>
             <div>
-              <p className="text-3xl font-extrabold text-emerald-400">
+              <p className="vn-display text-[28px] text-[var(--vn-forest-dark)]">
                 {fmt(quote.regularMarketPrice ?? 0, quote.currency)}
               </p>
-              <p className={quote.regularMarketChangePercent && quote.regularMarketChangePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+              <p
+                className={`text-[13px] font-semibold ${
+                  quote.regularMarketChangePercent && quote.regularMarketChangePercent >= 0
+                    ? 'text-[var(--vn-forest)]'
+                    : 'text-[var(--vn-red)]'
+                }`}
+              >
                 {quote.regularMarketChangePercent?.toFixed(2)}%
               </p>
             </div>
             <Sparkline points={history} />
           </div>
         )}
-        {quote?.error && <p className="text-red-400 text-sm">{quote.error}</p>}
-      </GlassPanel>
+        {quote?.error && <p className="text-[var(--vn-red)] text-[13px]">{quote.error}</p>}
+      </Bento>
 
-      <GlassPanel className="space-y-4">
-        <h2 className="text-lg font-bold">🧪 Portofolio Simulasi (kertas)</h2>
-        <p className="text-xs text-slate-500">Tidak ada uang sungguhan — hanya demo dengan harga live.</p>
-        <div className="flex gap-2 flex-wrap">
+      <Bento padding="lg">
+        <p className="vn-eyebrow mb-3">Portofolio simulasi</p>
+        <h3 className="vn-headline text-[22px] mb-2">Belajar dengan harga sungguhan, tanpa uang sungguhan.</h3>
+        <p className="text-[13px] text-[var(--vn-muted)] mb-5">
+          Disimpan di browser kamu. Tidak ada transaksi nyata.
+        </p>
+
+        <div className="flex flex-wrap gap-2 mb-4">
           <input
             value={newSym}
             onChange={e => setNewSym(e.target.value.toUpperCase())}
             placeholder="Simbol"
-            className="w-28 input-glass rounded-lg px-3 py-2 text-sm"
+            className="vn-input !w-32"
           />
           <input
             type="number"
             value={newShares}
             onChange={e => setNewShares(Number(e.target.value))}
-            className="w-24 input-glass rounded-lg px-3 py-2 text-sm"
+            className="vn-input !w-28"
           />
           <button
-            type="button"
-            className="btn-neon px-4 py-2 rounded-lg text-sm"
             onClick={() => {
               if (!newSym) return
               setHoldings(h => [...h.filter(x => x.symbol !== newSym), { symbol: newSym, shares: newShares }])
             }}
+            className="vn-btn vn-btn-primary !py-2.5"
           >
             Tambah
           </button>
         </div>
-        <ul className="space-y-2 text-sm">
-          {holdings.map(h => {
-            const q = portfolioQuotes[h.symbol]
-            const val = (q?.regularMarketPrice ?? 0) * h.shares
-            return (
-              <li key={h.symbol} className="flex justify-between items-center glass rounded-lg px-3 py-2">
-                <span>
-                  <strong>{h.symbol}</strong> × {h.shares}
-                </span>
-                <span className="text-emerald-400">{fmt(val, q?.currency)}</span>
-                <button type="button" className="text-red-400 text-xs" onClick={() => setHoldings(x => x.filter(i => i.symbol !== h.symbol))}>
-                  Hapus
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-        {holdings.length > 0 && (
-          <p className="text-lg font-bold text-cyan-300">Total simulasi: {fmt(portfolioValue, 'IDR')}</p>
+
+        {holdings.length > 0 ? (
+          <>
+            <ul className="space-y-2 mb-4">
+              {holdings.map(h => {
+                const q = portfolioQuotes[h.symbol]
+                const val = (q?.regularMarketPrice ?? 0) * h.shares
+                return (
+                  <li
+                    key={h.symbol}
+                    className="flex justify-between items-center bg-[var(--vn-bg-deep)] rounded-2xl px-4 py-3 text-[14px]"
+                  >
+                    <span>
+                      <strong>{h.symbol}</strong> × {h.shares}
+                    </span>
+                    <span className="text-[var(--vn-forest-dark)] font-semibold">
+                      {fmt(val, q?.currency)}
+                    </span>
+                    <button
+                      className="text-[var(--vn-red)] text-[12px]"
+                      onClick={() => setHoldings(x => x.filter(i => i.symbol !== h.symbol))}
+                    >
+                      Hapus
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="vn-headline text-[18px] text-[var(--vn-forest-dark)]">
+              Total simulasi: {fmt(portfolioValue, 'IDR')}
+            </p>
+          </>
+        ) : (
+          <p className="text-[13px] text-[var(--vn-muted)]">
+            Belum ada holding. Tambah simbol di atas untuk mulai simulasi.
+          </p>
         )}
-      </GlassPanel>
-    </motion.div>
+      </Bento>
+    </PageShell>
   )
 }

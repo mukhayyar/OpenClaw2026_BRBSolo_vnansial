@@ -10,6 +10,28 @@ import {
   calculateInvestmentGoal,
   suggestAssetAllocation,
 } from './market.js'
+import { scoreFinancialHealth } from './health.js'
+import {
+  getCompanyOverview,
+  getDividenTunai,
+  getFinancialReport,
+  listAllEmiten,
+} from '../lib/idx.js'
+import { getCoinDetail, assessCryptoRisk } from '../lib/coingecko.js'
+import {
+  listInsuranceCompanies,
+  calculatePremium,
+  recommendInsurance,
+} from '../lib/insurance.js'
+import {
+  getUserPortfolio,
+  addPortfolioHolding,
+  removePortfolioHolding,
+  updateMoneyBuffer,
+  saveHealthScore,
+  listHealthHistory,
+} from './portfolio.js'
+import { checkBankAccount, checkPhoneNumber } from '../lib/scamCheck.js'
 
 export async function runTool(name, args) {
   switch (name) {
@@ -29,6 +51,42 @@ export async function runTool(name, args) {
       return calculateInvestmentGoal(args)
     case 'suggest_asset_allocation':
       return suggestAssetAllocation(args)
+    case 'score_financial_health':
+      return scoreFinancialHealth(args)
+    case 'get_idx_company':
+      return getCompanyOverview(args?.code)
+    case 'get_idx_dividen':
+      return getDividenTunai(args?.code, args?.year)
+    case 'get_idx_financial':
+      return getFinancialReport(args?.code, args?.periode, args?.year)
+    case 'list_idx_emiten':
+      return listAllEmiten()
+    case 'get_crypto_quote':
+      return getCoinDetail(args?.id)
+    case 'assess_crypto_scam_risk':
+      return assessCryptoRisk(args?.id)
+    case 'list_insurance_companies':
+      return listInsuranceCompanies(args?.type)
+    case 'calculate_insurance_premium':
+      return calculatePremium(args)
+    case 'recommend_insurance':
+      return recommendInsurance(args)
+    case 'get_user_portfolio':
+      return getUserPortfolio(args)
+    case 'add_portfolio_holding':
+      return addPortfolioHolding(args)
+    case 'remove_portfolio_holding':
+      return removePortfolioHolding(args)
+    case 'update_money_buffer':
+      return updateMoneyBuffer(args)
+    case 'save_health_score':
+      return saveHealthScore(args)
+    case 'list_health_history':
+      return listHealthHistory(args)
+    case 'check_bank_account_report':
+      return checkBankAccount(args)
+    case 'check_phone_number_report':
+      return checkPhoneNumber(args)
     default:
       return { error: `Unknown tool: ${name}` }
   }

@@ -1,0 +1,55 @@
+# UI Apple Bento Rework — Progress
+Status: done
+Started: 2026-05-15
+Completed: 2026-05-15
+
+## Phase status
+- [x] 1. Plan + progress files written
+- [x] 2. Design system rewrite (index.css, index.html)
+- [x] 3. Shared components (Layout, AgentTicker, PageShell, ChatUI,
+        FloatingChat, ToolToastStack, Bento, LandscapeHero)
+- [x] 4. Landing rebuild (bento + landscape hero)
+- [x] 5. Inner-page migration (Cek, Kalkulator, Edukasi, Lapor, Rencana, Asisten)
+- [x] 6. New function Cek Kesehatan Finansial (page + tool + agent)
+- [x] 7. Tests (vitest, 32 passing) + build (vite, 230ms, 456KB → 140KB gzip)
+- [x] 8. Final writeup
+
+## Shipped files
+### Design system
+- `src/index.css` — full rewrite, white/green Apple/bento system
+- `index.html` — title, theme-color, fonts
+
+### Shared components
+- `src/components/Bento.tsx` (new) — Apple-style tile primitive
+- `src/components/LandscapeHero.tsx` (new) — inline SVG green landscape
+- `src/components/Layout.tsx` — clean nav, no Web3 wallet
+- `src/components/AgentTicker.tsx` — calm rotating reminders
+- `src/components/PageShell.tsx` — Apple-style page header
+- `src/components/ChatUI.tsx` — light bubbles
+- `src/components/FloatingChat.tsx` — softer pill
+- `src/components/ToolToastStack.tsx` — light toast
+- `src/components/WalletModal.tsx` — *deleted* (not needed)
+
+### Pages
+- `src/pages/Landing.tsx` — bento hero + grid + ink/mission tiles
+- `src/pages/KesehatanFinansial.tsx` (new) — score ring + bento pillars
+- `src/pages/CekInvestasi.tsx` — bento layout
+- `src/pages/KalkulatorPinjaman.tsx` — bento layout
+- `src/pages/Edukasi.tsx` — bento quiz + score panel
+- `src/pages/LaporPenipuan.tsx` — bento steps + hotlines
+- `src/pages/RencanaInvestasi.tsx` — bento goal + allocation + market
+- `src/pages/AsistenAI.tsx` — Apple shell
+
+### New function
+- `server/tools/health.js` — 4-pillar scoring (anggaran, dana darurat,
+  hutang, tabungan), 0-100, with recommendations + disclaimer
+- `src/lib/healthScore.ts` — instant-feedback mirror for the page
+- `server/tools/runner.js` — register `score_financial_health`
+- `server/tools/definitions.js` — JSON schema for the agent
+- `server/agent/systemPrompt.js` — capability advertised
+- `server/index.js` — `POST /api/health/score` endpoint
+- `tests/server/health.test.js` (new) — 5 cases
+
+## Notes
+- Reference plan: `.plan/ui-apple-bento-rework.plan`
+- Successor plan: `.plan/super-platform.plan`

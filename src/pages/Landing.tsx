@@ -1,179 +1,225 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import LandscapeHero from '../components/LandscapeHero'
+import Bento from '../components/Bento'
+
+const stats = [
+  { num: 'Rp 139T', label: 'Kerugian masyarakat dari investasi bodong', sub: 'OJK 2020–2025' },
+  { num: '5.000+', label: 'Entitas investasi ilegal diblokir', sub: 'Satgas Waspada Investasi' },
+  { num: '49,7%', label: 'Indeks literasi keuangan Indonesia', sub: 'masih di bawah 50%' },
+]
 
 const features = [
   {
-    icon: '🤖',
-    title: 'Asisten AI',
-    desc: 'Chat dengan AI yang bisa cek investasi, hitung pinjaman, dan bantu rencanakan tabungan.',
-    path: '/asisten',
-    color: 'from-violet-500/20 to-violet-500/5',
-    border: 'border-violet-500/30',
+    to: '/kesehatan',
+    eyebrow: 'Baru · sehat',
+    title: 'Cek Kesehatan Finansial',
+    desc: 'Skor 0–100 dari empat pilar: anggaran, dana darurat, hutang, dan tabungan. Lengkap dengan saran praktis.',
+    tone: 'forest' as const,
+    span: 'md:col-span-2 md:row-span-2',
+    pad: 'lg' as const,
   },
   {
-    icon: '🔍',
-    title: 'Cek Investasi',
-    desc: 'Verifikasi apakah perusahaan investasi terdaftar di OJK. Hindari investasi bodong.',
-    path: '/cek-investasi',
-    color: 'from-emerald-500/20 to-emerald-500/5',
-    border: 'border-emerald-500/30',
+    to: '/cek-investasi',
+    eyebrow: 'Verifikasi',
+    title: 'Cek izin OJK',
+    desc: 'Hindari investasi bodong dengan satu klik.',
+    tone: 'cream' as const,
+    span: '',
   },
   {
-    icon: '🧮',
-    title: 'Kalkulator Pinjaman',
-    desc: 'Bandingkan pinjaman wajar vs predator. Lihat bunga tersembunyi sebelum terjebak.',
-    path: '/kalkulator',
-    color: 'from-amber-500/20 to-amber-500/5',
-    border: 'border-amber-500/30',
+    to: '/kalkulator',
+    eyebrow: 'Kalkulator',
+    title: 'Bunga jujur',
+    desc: 'Bandingkan KUR, KPR, pinjol, dan rentenir.',
+    tone: 'mint' as const,
+    span: '',
   },
   {
-    icon: '📚',
-    title: 'Edukasi Keuangan',
-    desc: 'Belajar keuangan dengan cara seru. Quiz, tips, dan panduan dalam bahasa sederhana.',
-    path: '/edukasi',
-    color: 'from-blue-500/20 to-blue-500/5',
-    border: 'border-blue-500/30',
+    to: '/rencana-investasi',
+    eyebrow: 'Pertumbuhan',
+    title: 'Rencana investasi',
+    desc: 'Target tabungan, alokasi aset, harga pasar Yahoo Finance.',
+    tone: 'white' as const,
+    span: 'md:col-span-2',
   },
   {
-    icon: '🛡️',
-    title: 'Lapor Penipuan',
-    desc: 'Panduan langkah demi langkah untuk melapor ke OJK, BI, dan kepolisian.',
-    path: '/lapor',
-    color: 'from-red-500/20 to-red-500/5',
-    border: 'border-red-500/30',
+    to: '/edukasi',
+    eyebrow: 'Belajar',
+    title: 'Edukasi keuangan',
+    desc: 'Quiz singkat & tips harian.',
+    tone: 'white' as const,
+    span: '',
+  },
+  {
+    to: '/lapor',
+    eyebrow: 'Perlindungan',
+    title: 'Lapor penipuan',
+    desc: 'Langkah & template untuk lapor ke OJK, polisi, dan platform.',
+    tone: 'deep' as const,
+    span: '',
   },
 ]
 
-const stats = [
-  { num: '5,000+', label: 'Investasi Ilegal Diblokir OJK (2020–2025)' },
-  { num: 'Rp 139T', label: 'Kerugian Masyarakat dari Investasi Bodong' },
-  { num: '45%', label: 'Rakyat Indonesia Literasi Keuangan Rendah' },
-]
-
-const fade = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }),
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.06, duration: 0.55, ease: [0.2, 0.8, 0.2, 1] },
+  }),
 }
 
 export default function Landing() {
   return (
     <>
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-transparent" />
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl" />
-
-        <div className="relative max-w-6xl mx-auto px-4 pt-20 pb-16 text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+      {/* Hero with landscape illustration */}
+      <section className="vn-container pt-10 sm:pt-16">
+        <div className="landscape-hero" style={{ minHeight: 580 }}>
+          <div className="bento-pad-lg flex flex-col h-full">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+              className="max-w-3xl"
+            >
+              <span className="vn-chip mb-6">
+                <span className="vn-dot vn-pulse" /> Untuk semua rakyat Indonesia · gratis
               </span>
-              100% Gratis — Untuk Semua Rakyat Indonesia
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
-              Jangan Sampai{' '}
-              <span className="bg-gradient-to-r from-red-400 to-amber-400 bg-clip-text text-transparent">
-                Uangmu Hilang
-              </span>
-              <br />
-              Karena{' '}
-              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                Kurang Informasi
-              </span>
-            </h1>
-
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Cek investasi bodong, hitung pinjaman predator, dan lindungi dirimu dari penipuan keuangan.
-              Semua alat yang kamu butuhkan, gratis dan mudah dipahami.
-            </p>
-
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Link
-                to="/cek-investasi"
-                className="px-8 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/25"
-              >
-                🔍 Cek Investasi Sekarang
-              </Link>
-              <Link
-                to="/asisten"
-                className="px-8 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-all"
-              >
-                🤖 Tanya Asisten AI
-              </Link>
-            </div>
-          </motion.div>
+              <h1 className="vn-display text-[44px] sm:text-[68px] lg:text-[80px] text-[var(--vn-ink)]">
+                Tumbuh sehat <br />
+                bersama <span className="vn-text-gradient">keuanganmu.</span>
+              </h1>
+              <p className="mt-6 text-[19px] sm:text-[21px] text-[var(--vn-ink-soft)] leading-relaxed max-w-2xl">
+                Cek kesehatan finansial, verifikasi investasi, hitung pinjaman jujur, dan
+                bicara dengan asisten AI yang ramah. Tanpa jargon. Tanpa biaya.
+              </p>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <Link to="/kesehatan" className="vn-btn vn-btn-primary">
+                  Mulai Cek Kesehatan
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                    <path d="M5 12h14M13 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <Link to="/asisten" className="vn-btn vn-btn-secondary">
+                  Tanya Asisten AI
+                </Link>
+              </div>
+            </motion.div>
+            <LandscapeHero height={260} />
+          </div>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="max-w-4xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {/* Stats strip */}
+      <section className="vn-container mt-12 sm:mt-20">
+        <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
           {stats.map((s, i) => (
             <motion.div
               key={s.label}
               custom={i}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
-              variants={fade}
-              className="text-center p-6 rounded-2xl bg-white/5 border border-white/10"
+              viewport={{ once: true, margin: '-50px' }}
+              variants={fadeUp}
+              className="bento bento-pad"
             >
-              <div className="text-3xl font-extrabold text-amber-400 mb-2">{s.num}</div>
-              <div className="text-sm text-slate-400">{s.label}</div>
+              <p className="vn-display text-[40px] sm:text-[48px] vn-text-gradient mb-1.5">{s.num}</p>
+              <p className="text-[15px] text-[var(--vn-ink)] font-medium">{s.label}</p>
+              <p className="text-[12px] text-[var(--vn-muted)] mt-1">{s.sub}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* Features */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-3">Alat yang Kamu Butuhkan</h2>
-          <p className="text-slate-400">Lima fitur utama untuk melindungi keuanganmu</p>
+      {/* Bento feature grid */}
+      <section className="vn-container vn-section">
+        <div className="max-w-3xl mb-12">
+          <p className="vn-eyebrow mb-3">Yang kamu butuhkan</p>
+          <h2 className="vn-display text-[36px] sm:text-[56px] leading-[1.05]">
+            Satu tempat untuk <br /> melindungi keuanganmu.
+          </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 auto-rows-[minmax(180px,auto)]">
           {features.map((f, i) => (
-            <motion.div
-              key={f.path}
-              custom={i}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fade}
+            <Bento
+              key={f.to}
+              tone={f.tone}
+              padding={f.pad ?? 'md'}
+              delay={i * 0.05}
+              span={f.span}
+              className="block group"
+              as="a"
+              href={f.to}
             >
-              <Link
-                to={f.path}
-                className={`block p-6 rounded-2xl bg-gradient-to-br ${f.color} border ${f.border} hover:scale-[1.02] transition-all group`}
+              <p
+                className={`vn-eyebrow mb-3 ${
+                  f.tone === 'forest' || f.tone === 'ink' ? '!text-[var(--vn-mint)]' : ''
+                }`}
               >
-                <div className="text-4xl mb-4">{f.icon}</div>
-                <h3 className="text-xl font-bold mb-2 group-hover:text-emerald-400 transition-colors">
-                  {f.title}
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
-              </Link>
-            </motion.div>
+                {f.eyebrow}
+              </p>
+              <h3
+                className={`vn-headline text-[22px] sm:text-[28px] mb-2 ${
+                  f.tone === 'forest' || f.tone === 'ink' ? 'text-white' : 'text-[var(--vn-ink)]'
+                }`}
+              >
+                {f.title}
+              </h3>
+              <p
+                className={`text-[14.5px] leading-relaxed ${
+                  f.tone === 'forest' || f.tone === 'ink'
+                    ? 'text-white/85'
+                    : 'text-[var(--vn-ink-soft)]'
+                }`}
+              >
+                {f.desc}
+              </p>
+              <p
+                className={`mt-5 text-[13px] font-semibold inline-flex items-center gap-1 ${
+                  f.tone === 'forest' || f.tone === 'ink'
+                    ? 'text-white'
+                    : 'text-[var(--vn-forest)]'
+                }`}
+              >
+                Buka
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <path d="M5 12h14M13 5l7 7-7 7" />
+                </svg>
+              </p>
+            </Bento>
           ))}
         </div>
       </section>
 
-      {/* Warning banner */}
-      <section className="max-w-4xl mx-auto px-4 pb-20">
-        <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center">
-          <div className="text-3xl mb-3">⚠️</div>
-          <h3 className="text-lg font-bold text-red-400 mb-2">Waspada Penipuan!</h3>
-          <p className="text-slate-400 text-sm max-w-xl mx-auto">
-            Jika seseorang menjanjikan keuntungan pasti lebih dari 2% per bulan tanpa risiko,
-            kemungkinan besar itu <strong className="text-red-400">PENIPUAN</strong>.
-            Tidak ada investasi yang bebas risiko.
-          </p>
+      {/* Trust / mission */}
+      <section className="vn-container pb-24">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+          <Bento tone="ink" padding="lg">
+            <p className="vn-eyebrow !text-[var(--vn-mint)] mb-3">Misi</p>
+            <h3 className="vn-headline text-[28px] sm:text-[36px] mb-4 text-white">
+              Literasi keuangan bukan kemewahan. Itu hak.
+            </h3>
+            <p className="text-white/80 text-[15px] leading-relaxed">
+              Vnansial gratis dan terbuka karena setiap rupiah yang dilindungi adalah
+              rupiah yang bisa membiayai keluarga, pendidikan, dan masa depan.
+            </p>
+            <Link to="/edukasi" className="mt-6 inline-flex vn-btn vn-btn-on-dark">
+              Pelajari lebih lanjut
+            </Link>
+          </Bento>
+          <Bento tone="mint" padding="lg">
+            <p className="vn-eyebrow mb-3">Hati-hati</p>
+            <h3 className="vn-headline text-[24px] sm:text-[32px] mb-3">
+              Jika dijanjikan untung pasti &gt;2% per bulan,{' '}
+              <span className="text-[var(--vn-red)]">itu penipuan.</span>
+            </h3>
+            <p className="text-[var(--vn-ink-soft)] text-[15px] leading-relaxed">
+              Tidak ada investasi yang bebas risiko. Hubungi <strong>OJK 157</strong> sebelum
+              transfer ke siapa pun.
+            </p>
+          </Bento>
         </div>
       </section>
     </>

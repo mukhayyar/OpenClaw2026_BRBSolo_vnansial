@@ -1,0 +1,88 @@
+# Super Platform — Progress
+Status: done (scaffolded; production polish ongoing)
+Started: 2026-05-15
+Completed: 2026-05-15
+
+## Phases
+- [x] 1. Plan + progress files
+- [x] 2. Server libs (idx, coingecko, insurance, db, telegram)
+- [x] 3. Server tools + endpoints + definitions wiring
+- [x] 4. Frontend pages (Emiten, Crypto, Asuransi, Portofolio)
+- [x] 5. Landing refactor (nav-less, bento)
+- [x] 6. Contributor docs (CLAUDE.md, AGENTS.md, CONTRIBUTING.md,
+        ARCHITECTURE.md, DEPLOYMENT.md)
+- [x] 7. Tests + build (32 passing; vite build OK)
+
+## Shipped files
+
+### Server libs
+- `server/lib/idx.js` — IDX.co.id proxy (profil, dividen tunai/saham,
+  ESG, pemegang saham, financial report, calendar, perubahan nama,
+  core business). 10-min cache + curated fallback list of 35 emiten.
+- `server/lib/coingecko.js` — Top coins, coin detail, scam-risk heuristic
+  (0-100 score from age, cap, volume, homepage, known scam list, 30d
+  pump/dump).
+- `server/lib/insurance.js` — Curated dataset: BPJS, Prudential, AIA,
+  Allianz, Manulife, Sinar Mas, Asuransi Astra (Garda Oto), AXA Mandiri.
+  Premium calculator + recommendation engine.
+- `server/lib/db.js` — better-sqlite3 layer with in-memory fallback.
+  Tables: user, health_snapshot, holding, buffer.
+- `server/integrations/telegram.js` — Polling bot, env-gated, commands:
+  /start /help /score /quote /crypto /emiten /ask /portofolio.
+
+### Server endpoints
+- `/api/idx/emiten` — list emiten
+- `/api/idx/profile/:code`, `/api/idx/dividen/:code`,
+  `/api/idx/financial/:code`, `/api/idx/esg/:code`,
+  `/api/idx/pemegang/:code`, `/api/idx/calendar/:code`
+- `/api/idx/:code` — composite overview
+- `/api/crypto/top`, `/api/crypto/coin`, `/api/crypto/risk`
+- `/api/insurance`, `/api/insurance/:id`,
+  `/api/insurance/premium`, `/api/insurance/recommend`
+- `/api/me/portfolio` (GET), `/api/me/portfolio/holding` (POST/DELETE),
+  `/api/me/portfolio/buffer` (POST)
+- `/api/me/health` (POST), `/api/me/health/history` (GET)
+
+### Agent tools (registered)
+- `get_idx_company`, `get_idx_dividen`, `get_idx_financial`,
+  `list_idx_emiten`
+- `get_crypto_quote`, `assess_crypto_scam_risk`
+- `list_insurance_companies`, `calculate_insurance_premium`,
+  `recommend_insurance`
+
+### Frontend pages (new)
+- `src/pages/CekEmiten.tsx` — IDX browser + emiten profile bento
+- `src/pages/CryptoWatch.tsx` — top coins + risk panel + market table
+- `src/pages/Asuransi.tsx` — comparator + premium calc + recommender
+- `src/pages/Portofolio.tsx` — holdings + buffer manager (localStorage)
+
+### Routing & nav
+- `src/main.tsx` — routes for /emiten, /crypto, /asuransi,
+  /portofolio, /kesehatan
+- `src/components/Layout.tsx` — home (/) hides nav, shows floating logo
+  only. Bento grid serves as primary navigation. Other pages keep
+  minimal sticky header.
+
+### Docs (new)
+- `CLAUDE.md` — canonical agent brief
+- `AGENTS.md` — non-Claude agent capabilities summary
+- `CONTRIBUTING.md` — branch/commit/test rules
+- `ARCHITECTURE.md` — diagram + data flow
+- `DEPLOYMENT.md` — Sumopod / Jetorbit / generic VPS / Docker recipes
+
+### Tests
+- `tests/server/health.test.js` — 5 cases
+- `tests/server/extras.test.js` — 7 cases (insurance + crypto-risk)
+- All 32 tests passing.
+
+## Known follow-ups
+- Install `better-sqlite3` to upgrade from in-memory persistence (single
+  `npm install` away).
+- Wire Telegram webhook handler for production (polling works for local).
+- Auto-refresh emiten cache from IDX (currently 35-row curated fallback
+  when upstream listing endpoint shape changes).
+- e2e tests for the 4 new pages (only smoke covered so far).
+
+## Notes
+- Reference plan: `.plan/super-platform.plan`
+- Predecessor plan: `.plan/ui-apple-bento-rework.plan`

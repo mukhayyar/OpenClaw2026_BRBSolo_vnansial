@@ -1,0 +1,41 @@
+services:
+  vnansial:
+    build: .
+    image: vnansial:latest
+    container_name: vnansial
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      - PORT=3001
+      - VNANSIAL_DB_PATH=/data/vnansial.db
+      - NODE_ENV=production
+    volumes:
+      - vnansial_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # Optional nginx + Let's Encrypt sidecar if you want HTTPS termination
+  # in front of Vnansial without an external load balancer. Comment out
+  # if you already have a reverse proxy.
+  # nginx:
+  #   image: nginx:alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - vnansial_certs:/etc/letsencrypt
+  #   depends_on:
+  #     - vnansial
+
+volumes:
+  vnansial_data:
+  # vnansial_certs:

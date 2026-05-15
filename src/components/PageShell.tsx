@@ -2,37 +2,33 @@ import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 
 type Props = {
+  eyebrow?: string
   title: string
   subtitle?: string
-  icon?: string
   children: ReactNode
+  tone?: 'default' | 'cream'
 }
 
-export default function PageShell({ title, subtitle, icon, children }: Props) {
+export default function PageShell({ eyebrow, title, subtitle, children, tone = 'default' }: Props) {
   return (
-    <div className="page-shell">
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          {icon && <span>{icon}</span>}
-          <span className="bg-gradient-to-r from-white via-emerald-200 to-cyan-300 bg-clip-text text-transparent">
-            {title}
-          </span>
-        </h1>
-        {subtitle && <p className="text-slate-400 mb-8">{subtitle}</p>}
+    <div className={tone === 'cream' ? 'bg-[var(--vn-bg-soft)]' : 'bg-white'}>
+      <div className="vn-container vn-section">
+        <motion.header
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
+          className="max-w-3xl mb-10 sm:mb-14"
+        >
+          {eyebrow && <p className="vn-eyebrow mb-3">{eyebrow}</p>}
+          <h1 className="vn-display text-[40px] sm:text-[56px] mb-4">{title}</h1>
+          {subtitle && (
+            <p className="text-[18px] text-[var(--vn-ink-soft)] leading-relaxed max-w-2xl">
+              {subtitle}
+            </p>
+          )}
+        </motion.header>
         {children}
-      </motion.div>
+      </div>
     </div>
-  )
-}
-
-export function GlassPanel({
-  children,
-  className = '',
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div className={`glass rounded-2xl panel-glass ${className}`}>{children}</div>
   )
 }

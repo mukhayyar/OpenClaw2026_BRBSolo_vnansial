@@ -1,0 +1,17 @@
+# Super Platform v2 — Progress
+Status: in_progress
+Started: 2026-05-15
+
+- [x] Plan written
+- [ ] Trading chart (TradingChart component + page embeds)
+- [ ] Tool-call timeline polish
+- [ ] Settings page (masked telegram + PIN-gated edits)
+- [ ] Multi-agent presets + dropdown
+- [ ] Chat sessions + .md export
+- [ ] Number masking
+- [ ] Crypto search (full CoinGecko)
+- [ ] Alerts + cron scaffold
+- [ ] GitHub Actions ghcr release.yml
+- [ ] README update with ghcr docker run snippet
+- [ ] Puppeteer fallback scaffold
+- [ ] Final tests + build

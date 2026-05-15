@@ -1,0 +1,64 @@
+# Vnansial — Apple-style Bento UI Rework
+Priority: P0
+Status: in_progress
+Last updated: 2026-05-15
+
+## Goal
+Replace the dark Web3/glass theme with a calm, Apple-inspired interface
+focused on user wellbeing. White base, green landscape accents, bento grid
+storytelling. Ship one new practical function — **Cek Kesehatan Finansial** —
+that gives users an actionable 0-100 score with personalised recommendations.
+
+## Why
+- The previous UI felt "AI-ish" (neon, on-chain ticker, wallet modal) which
+  distracted from the actual purpose: helping ordinary Indonesians make
+  better financial decisions.
+- Apple's site (apple.com) demonstrates the alternative — massive type, lots
+  of white space, bento tiles that mix product shot + value prop + CTA.
+- Green + landscape imagery anchors the brand to *health*, *growth*, *calm* —
+  the emotional registers that financial education should evoke.
+- A wellness *score* turns scattered tools into one number a user can act on
+  (anchor metric → drives engagement with the rest of the app).
+
+## Design system targets
+- **Base:** `#ffffff` page, `#fafaf7` panel, `#f3f4ef` deep surface
+- **Primary green palette:** `#2f7d3a` (forest), `#4f9d63` (sage), `#86c294`
+  (mint), `#e8f1ea` (cream) — derived to feel like *Indonesia hutan* not
+  fluorescent neon.
+- **Type:** Display = Plus Jakarta Sans 700/800 with negative tracking;
+  body = Inter / system stack. Sizes follow Apple — 64px hero, 48px section,
+  32px card, 17px body, 13px caption.
+- **Bento:** rounded 28-32px tiles, soft shadow, deliberate aspect ratios
+  (1×1, 2×1, 2×2), high-contrast headline + small caption.
+- **Imagery:** SVG landscape hero (mountains + sun) inline so it loads
+  instantly, no flicker, no third-party host.
+- Strip: AgentTicker, FloatingChat (kept but minimal), ToolToastStack (kept
+  but light), WalletModal (deleted — not needed).
+
+## Phases (tracked in `.progress/ui-apple-bento-rework.progress`)
+1. Plan + progress files
+2. Design system rewrite (`src/index.css`, `index.html`)
+3. Shared components (`Layout`, `PageShell`, `ChatUI`, `FloatingChat`,
+   `AgentTicker`, `ToolToastStack`, new `LandscapeHero`, `Bento`)
+4. Landing rebuild with bento grid
+5. Inner-page migration (Cek, Kalkulator, Edukasi, Lapor, Rencana, Asisten)
+6. New function **Cek Kesehatan Finansial** — page + tool + agent integration
+7. Tests (`vitest`), build (`vite build`), regression fixes
+8. Final progress writeup
+
+## New function — Cek Kesehatan Finansial
+- **Page:** `/kesehatan`
+- **Inputs:** income, fixed expenses, variable expenses, emergency fund,
+  total debt, monthly savings
+- **Output:** 0-100 score, four pillars (Budget, Cadangan, Hutang, Tabungan),
+  per-pillar verdict + actionable tip, overall recommendation
+- **Tool:** `score_financial_health` exposed to the agent so the AI assistant
+  can score from chat too
+- **Why this:** It's the *anchor metric* a wellness brand needs. Users come
+  back to track it. It is also a natural funnel into Kalkulator (debt),
+  Rencana Investasi (savings target), CekInvestasi (verify recommendations).
+
+## Out of scope
+- Backend persistence of score (browser localStorage only for now)
+- New deploy / CI config
+- Mobile-app version

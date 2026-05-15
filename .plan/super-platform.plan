@@ -1,0 +1,77 @@
+# Vnansial — All-in-one Indonesian Financial Platform
+Priority: P0
+Status: in_progress
+Last updated: 2026-05-15
+
+## Goal
+Turn Vnansial into a single, open-source, locally-runnable financial platform
+where Indonesians get:
+- IDX saham coverage (semua emiten Indonesia, profile, dividen, laporan
+  keuangan, ESG, history, pemegang saham, kalender)
+- Crypto watch with scam/fraud risk probability
+- Insurance information, recommendations, premium calculator
+- Personal finance: portfolio, savings, emergency fund, money buffer,
+  kesehatan finansial
+- AI Asisten that uses all of the above via tool-calling
+- Telegram bot so the user can talk to their data from chat
+- SQLite persistence for portfolio + score history + telegram binding
+
+## Why
+The earlier rebuild made the UI calm and bento-driven. The user now wants the
+*content* to match: real Indonesian data sources, complete asset coverage,
+and the same calm bento navigation pattern carried through.
+
+## Architecture decisions
+1. **Server proxies** for everything that has CORS or fragile public APIs
+   (idx.co.id requires a Referer header; CoinGecko works direct but
+   centralising lets us rate-limit & cache).
+2. **SQLite via `better-sqlite3`** for portfolio + health snapshots + telegram
+   bindings. Sync API → trivial to use, no migrations framework needed.
+3. **Telegram bot via raw HTTP API** (no extra dep). Env-gated by
+   `TELEGRAM_BOT_TOKEN`; polling mode for local dev, webhook ready.
+4. **Local-first** — every feature works against localStorage if the server
+   is offline. SQLite is the upgrade path for self-hosters.
+5. **Navbar-less home** — Landing becomes the bento command center; other
+   pages keep a minimal top bar with logo + Home.
+6. **Open source friendly** — CLAUDE.md, AGENTS.md, CONTRIBUTING.md so any
+   AI coding agent can pick up the codebase consistently.
+
+## New server modules
+- `server/lib/idx.js` — IDX.co.id proxy with Referer header + cache
+- `server/lib/coingecko.js` — Crypto data + scam heuristic
+- `server/lib/insurance.js` — Indonesian insurance data (BPJS, swasta)
+- `server/lib/db.js` — SQLite layer (graceful fallback)
+- `server/integrations/telegram.js` — Bot polling + commands
+- `server/tools/idx.js`, `server/tools/crypto.js`, `server/tools/insurance.js`,
+  `server/tools/portfolio.js` — agent-callable wrappers
+
+## New frontend pages
+- `/emiten` — Cek Emiten (IDX) with profile, financial chart, dividen
+- `/crypto` — CryptoWatch with risk badge
+- `/asuransi` — Insurance comparator + premium calculator
+- `/portofolio` — Portfolio + savings + emergency fund manager
+
+## New agent tools
+- `get_idx_company_profile` (KodeEmiten)
+- `get_idx_financial_report` (KodeEmiten, periode, year)
+- `get_idx_dividen` (KodeEmiten, year)
+- `list_idx_emiten` (optional search)
+- `get_crypto_quote` (symbol/id)
+- `assess_crypto_scam_risk` (symbol/id)
+- `recommend_insurance` (riskProfile, budget, dependents)
+- `calculate_insurance_premium` (type, coverage, age)
+- `get_user_portfolio` / `save_portfolio_holding`
+
+## Phases (mapped to `.progress/super-platform.progress`)
+1. Plan + progress files
+2. Server libs (idx, coingecko, insurance, db, telegram)
+3. Server tools + endpoints + definitions wiring
+4. Frontend pages (Emiten, Crypto, Asuransi, Portofolio)
+5. Landing refactor (nav-less, bento)
+6. Contributor docs (CLAUDE.md, AGENTS.md, CONTRIBUTING.md, ARCHITECTURE.md)
+7. Tests + build
+
+## Out of scope (this iteration)
+- User auth (single-user assumption for local self-host)
+- WebSocket live price streaming
+- Bond marketplace (data added to insurance/edukasi only)

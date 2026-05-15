@@ -24,7 +24,10 @@ Judges score **Autonomy 30%**, **Creativity 30%**, **Technical 20%**. P0 items d
 | `ai-sumopod-qwen.plan` | P0 | partial | SumoPod qwen3.6-flash agent |
 | `waspada-sqlite.plan` | P1 | not_started | OJK CSV → SQLite search |
 | `discover-challenges.plan` | P1 | not_started | Challenges + Coach agent |
-| `ui-futuristic-web3.plan` | P1 | done | Glass / Web3 UI |
+| `ui-futuristic-web3.plan` | P2 | superseded | Glass / Web3 UI (replaced by `ui-apple-bento-rework.plan`) |
+| `ui-apple-bento-rework.plan` | P0 | done | White + green Apple-style bento UI + Cek Kesehatan Finansial |
+| `super-platform.plan` | P0 | done | IDX, Crypto, Insurance, Portfolio, Telegram, SQLite, contributor docs |
+| `super-platform-v2.plan` | P0 | in_progress | Charts, sessions, multi-agent, settings, alerts, ghcr CI |
 | `repliz-optional.plan` | P2 | cancelled | Removed — no Repliz integration |
 | `testing-ci.plan` | P1 | partial | Vitest + GitHub Actions |
 | `judge-docs.plan` | P0 | partial | README, AGENT.md, deck |

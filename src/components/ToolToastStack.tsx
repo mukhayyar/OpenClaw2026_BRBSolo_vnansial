@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react'
 
 type Toast = { id: number; name: string }
 
+const TOOL_LABELS: Record<string, string> = {
+  check_investment_company: 'Cek izin OJK',
+  calculate_loan: 'Hitung pinjaman',
+  assess_investment_red_flags: 'Nilai red flag',
+  get_fraud_report_guide: 'Panduan lapor',
+  get_market_quote: 'Ambil harga pasar',
+  search_market_symbols: 'Cari simbol pasar',
+  calculate_investment_goal: 'Simulasi tabungan',
+  suggest_asset_allocation: 'Saran alokasi aset',
+  score_financial_health: 'Skor kesehatan finansial',
+}
+
 export default function ToolToastStack() {
   const [toasts, setToasts] = useState<Toast[]>([])
 
@@ -26,14 +38,15 @@ export default function ToolToastStack() {
       {toasts.map(t => (
         <div
           key={t.id}
-          className="tool-toast glass-strong rounded-xl px-4 py-3 border border-cyan-500/30 pointer-events-auto"
+          className="vn-toast bg-white border border-[var(--vn-line)] rounded-2xl px-4 py-3 pointer-events-auto"
+          style={{ boxShadow: 'var(--vn-shadow-md)' }}
         >
-          <div className="flex items-center gap-2 text-xs text-cyan-400 font-mono mb-0.5">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 status-pulse" />
-            TX CONFIRMED
+          <div className="flex items-center gap-2 text-[11px] text-[var(--vn-sage)] font-semibold mb-0.5">
+            <span className="vn-dot vn-pulse" />
+            ASISTEN BERAKSI
           </div>
-          <p className="text-sm text-slate-200">
-            Tool executed: <span className="text-emerald-400 font-semibold">{t.name}</span>
+          <p className="text-[13px] text-[var(--vn-ink-soft)]">
+            {TOOL_LABELS[t.name] || t.name}
           </p>
         </div>
       ))}
