@@ -5,71 +5,17 @@ import Bento from '../components/Bento'
 import PinGate from '../components/PinGate'
 import MoneyInput from '../components/MoneyInput'
 import Pagination from '../components/Pagination'
+import ConfirmModal from '../components/ConfirmModal'
 import { pinHeader, getPin } from '../lib/auth'
+import { usePortfolioStore } from '../stores/portfolioStore'
+import { usePortfolioSync, fetchLivePrices } from '../lib/queries'
+import type { AssetKind, Holding, Buffer, Tujuan, CashflowEntry, CashflowRule } from '../stores/portfolioStore'
 
 const API = import.meta.env.VITE_API_URL || ''
-const STORAGE_KEY = 'vnansial-portfolio-v3'
-
-type AssetKind = 'saham' | 'crypto' | 'reksadana' | 'obligasi' | 'logam' | 'cash'
-
-type Holding = {
-  id: string
-  kind: AssetKind
-  symbol: string
-  amount: number
-  costBasis?: number
-}
 
 const CURRENCIES = ['IDR', 'USD', 'EUR', 'SGD', 'JPY', 'AUD', 'GBP', 'CNY'] as const
-// Simple FX fallback (will be replaced by live USD/IDR from server)
 const FX_TO_IDR_FALLBACK: Record<string, number> = {
   IDR: 1, USD: 16000, EUR: 17400, SGD: 11800, JPY: 102, AUD: 10500, GBP: 20300, CNY: 2200,
-}
-
-type Buffer = {
-  kind: 'emergency' | 'money_buffer'
-  amount: number
-  target: number
-}
-
-type Tujuan = {
-  id: string
-  name: string
-  category: 'asset' | 'phone' | 'home' | 'travel' | 'vehicle' | 'education' | 'other'
-  amount: number
-  target: number
-  isComplete: boolean
-  isUsed: boolean
-}
-
-type CashflowEntry = {
-  id: string
-  date: string
-  category: string
-  type: 'income' | 'expense'
-  amount: number
-  note?: string
-}
-
-type Debt = {
-  id: string
-  name: string
-  kind: string
-  principal: number
-  remaining: number
-  monthlyPayment?: number
-  annualRate?: number
-}
-
-type CashflowRule = {
-  id: number
-  kind: 'income' | 'expense'
-  category: string
-  amount: number
-  schedule: 'daily' | 'weekly' | 'monthly'
-  day_of_month?: number
-  active: number
-  next_fire_at: number
 }
 
 const KIND_LABEL: Record<AssetKind, string> = {
@@ -108,25 +54,6 @@ function fmtUSD(n: number) {
   }).format(n)
 }
 
-type State = {
-  holdings: Holding[]
-  buffers: Buffer[]
-  tujuan: Tujuan[]
-  cashflow: CashflowEntry[]
-  debts: Debt[]
-}
-
-const DEFAULT: State = {
-  holdings: [],
-  buffers: [
-    { kind: 'emergency', amount: 0, target: 0 },
-    { kind: 'money_buffer', amount: 0, target: 0 },
-  ],
-  tujuan: [],
-  cashflow: [],
-  debts: [],
-}
-
 export default function Portofolio() {
   return (
     <PageShell
@@ -146,237 +73,87 @@ export default function Portofolio() {
 }
 
 function PortofolioBody() {
-  const [state, setState] = useState<State>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      const parsed = raw ? JSON.parse(raw) : null
-      return parsed ? { ...DEFAULT, ...parsed } : DEFAULT
-    } catch {
-      return DEFAULT
-    }
-  })
-  const [syncing, setSyncing] = useState(false)
-  const [livePrices, setLivePrices] = useState<Record<string, { price: number; currency: string }>>({})
-  const [serverDebts, setServerDebts] = useState<any[]>([])
-  const [serverRules, setServerRules] = useState<CashflowRule[]>([])
-  const [fxRate, setFxRate] = useState<number>(16000)
+  const {
+    holdings, buffers, tujuan, cashflow, debts, cashflowRules,
+    livePrices, fxRate, syncing,
+    setLivePrices,
+    addHolding, removeHolding, updateBuffer,
+    addTujuan, updateTujuan, removeTujuan,
+    addCash, removeCash,
+    addDebt, removeDebt,
+    addCashflowRule, toggleCashflowRule, removeCashflowRule,
+  } = usePortfolioStore()
+
+  const { refetch } = usePortfolioSync()
   const [page, setPage] = useState(1)
   const [cashPage, setCashPage] = useState(1)
   const PAGE_SIZE = 10
 
-  // Pull holdings/buffers from server when PIN is set
+  const [confirm, setConfirm] = useState<{
+    title: string; message: string; action: () => void
+  } | null>(null)
+
   useEffect(() => {
-    if (!getPin()) return
-    fetch(`${API}/api/me/portfolio`, { headers: pinHeader() })
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) return
-        if (Array.isArray(d.holdings)) {
-          const remoteHoldings: Holding[] = d.holdings.map((h: any) => ({
-            id: String(h.id),
-            kind: h.kind,
-            symbol: h.symbol,
-            amount: h.amount,
-            costBasis: h.cost_basis ?? undefined,
-          }))
-          const remoteBuffers: Buffer[] = ['emergency', 'money_buffer'].map(k => {
-            const b = d.buffers.find((x: any) => x.kind === k)
-            return { kind: k as Buffer['kind'], amount: b?.amount || 0, target: b?.target || 0 }
-          })
-          setState(s => ({ ...s, holdings: remoteHoldings, buffers: remoteBuffers }))
+    if (holdings.length > 0) {
+      fetchLivePrices(holdings, fxRate).then((results) => {
+        const prices: Record<string, { price: number; currency: string }> = {}
+        for (const r of results) {
+          if (r.status === 'fulfilled' && r.value) {
+            prices[r.value.key] = { price: r.value.price, currency: r.value.currency }
+          }
         }
+        setLivePrices(prices)
       })
-      .catch(() => {})
+    }
+  }, [holdings, fxRate])
 
-    // Debts
-    fetch(`${API}/api/me/debts`, { headers: pinHeader() })
-      .then(r => r.json())
-      .then(d => setServerDebts(d.debts || []))
-      .catch(() => {})
-
-    // Cashflow rules
-    fetch(`${API}/api/me/cashflow-rules`, { headers: pinHeader() })
-      .then(r => r.json())
-      .then(d => setServerRules(d.rules || []))
-      .catch(() => {})
-
-    // USD/IDR FX
-    fetch(`${API}/api/market/fx`)
-      .then(r => r.json())
-      .then(d => { if (d?.rate) setFxRate(Number(d.rate)) })
-      .catch(() => {})
-  }, [])
-
-  async function refreshDebts() {
-    if (!getPin()) return
-    const d = await fetch(`${API}/api/me/debts`, { headers: pinHeader() }).then(r => r.json())
-    setServerDebts(d.debts || [])
-  }
-  async function refreshRules() {
-    if (!getPin()) return
-    const d = await fetch(`${API}/api/me/cashflow-rules`, { headers: pinHeader() }).then(r => r.json())
-    setServerRules(d.rules || [])
-  }
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [state])
-
-  // Fetch live prices for holdings (Yahoo for saham, CoinGecko for crypto, FX for cash)
-  useEffect(() => {
-    state.holdings.forEach(async h => {
-      try {
-        if (h.kind === 'saham') {
-          const sym = /^[A-Z]{2,5}$/.test(h.symbol) ? `${h.symbol}.JK` : h.symbol
-          const res = await fetch(`${API}/api/market/quote?symbol=${encodeURIComponent(sym)}`)
-          const data = await res.json()
-          if (data?.regularMarketPrice) {
-            setLivePrices(p => ({ ...p, [`${h.kind}:${h.symbol}`]: { price: data.regularMarketPrice, currency: data.currency || 'IDR' } }))
-          }
-        } else if (h.kind === 'crypto') {
-          const res = await fetch(`${API}/api/crypto/coin?id=${encodeURIComponent(h.symbol.toLowerCase())}`)
-          const data = await res.json()
-          if (data?.price) {
-            setLivePrices(p => ({ ...p, [`${h.kind}:${h.symbol}`]: { price: data.price, currency: 'USD' } }))
-          }
-        } else if (h.kind === 'cash') {
-          // For cash, the "price" is just the FX rate to IDR. Symbol IS the currency code.
-          const ccy = h.symbol.toUpperCase()
-          const rate = ccy === 'USD' ? fxRate : (FX_TO_IDR_FALLBACK[ccy] || 1)
-          setLivePrices(p => ({ ...p, [`${h.kind}:${h.symbol}`]: { price: rate, currency: ccy } }))
-        }
-      } catch {
-        // ignore
-      }
-    })
-  }, [state.holdings, fxRate])
-
-  async function persistHolding(h: Omit<Holding, 'id'>) {
-    if (!getPin()) return
-    setSyncing(true)
-    await fetch(`${API}/api/me/portfolio/holding`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...pinHeader() },
-      body: JSON.stringify(h),
-    }).catch(() => {})
-    setSyncing(false)
-  }
-
-  async function persistDelete(h: Holding) {
-    if (!getPin()) return
-    setSyncing(true)
-    await fetch(`${API}/api/me/portfolio/holding`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', ...pinHeader() },
-      body: JSON.stringify({ kind: h.kind, symbol: h.symbol }),
-    }).catch(() => {})
-    setSyncing(false)
-  }
-
-  async function persistBuffer(b: Buffer) {
-    if (!getPin()) return
-    setSyncing(true)
-    await fetch(`${API}/api/me/portfolio/buffer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...pinHeader() },
-      body: JSON.stringify(b),
-    }).catch(() => {})
-    setSyncing(false)
-  }
-
-  // ----- Holdings -----
-  function addHolding(h: Omit<Holding, 'id'>) {
-    if (!h.symbol.trim() || h.amount <= 0) return
-    const next: Holding = { ...h, symbol: h.symbol.toUpperCase().trim(), id: crypto.randomUUID() }
-    setState(s => ({ ...s, holdings: [...s.holdings, next] }))
-    persistHolding(next)
-  }
-  function removeHolding(id: string) {
-    const target = state.holdings.find(h => h.id === id)
-    setState(s => ({ ...s, holdings: s.holdings.filter(h => h.id !== id) }))
-    if (target) persistDelete(target)
-  }
-
-  // ----- Buffers -----
-  function updateBuffer(kind: Buffer['kind'], patch: Partial<Buffer>) {
-    setState(s => {
-      const next = { ...s, buffers: s.buffers.map(b => (b.kind === kind ? { ...b, ...patch } : b)) }
-      const changed = next.buffers.find(b => b.kind === kind)
-      if (changed) persistBuffer(changed)
-      return next
-    })
-  }
-
-  // ----- Tujuan -----
-  function addTujuan(t: Omit<Tujuan, 'id'>) {
-    if (!t.name.trim()) return
-    setState(s => ({ ...s, tujuan: [...s.tujuan, { ...t, id: crypto.randomUUID() }] }))
-  }
-  function updateTujuan(id: string, patch: Partial<Tujuan>) {
-    setState(s => ({ ...s, tujuan: s.tujuan.map(t => (t.id === id ? { ...t, ...patch } : t)) }))
-  }
-  function removeTujuan(id: string) {
-    setState(s => ({ ...s, tujuan: s.tujuan.filter(t => t.id !== id) }))
-  }
-
-  // ----- Cashflow -----
-  function addCash(entry: Omit<CashflowEntry, 'id'>) {
-    if (!entry.amount) return
-    setState(s => ({ ...s, cashflow: [{ ...entry, id: crypto.randomUUID() }, ...s.cashflow].slice(0, 200) }))
-  }
-  function removeCash(id: string) {
-    setState(s => ({ ...s, cashflow: s.cashflow.filter(c => c.id !== id) }))
-  }
-
-  // ----- Aggregates -----
   const liveValue = useMemo(() => {
-    return state.holdings.reduce((sum, h) => {
+    return holdings.reduce((sum, h) => {
       const live = livePrices[`${h.kind}:${h.symbol}`]
       if (!live) return sum + (h.costBasis || 0) * h.amount
       const ccy = live.currency
       if (h.kind === 'cash') {
-        // amount is units of the foreign currency, price is fx-to-IDR
         return sum + h.amount * live.price
       }
       const idr = ccy === 'IDR' ? live.price : live.price * (ccy === 'USD' ? fxRate : (FX_TO_IDR_FALLBACK[ccy] || fxRate))
       return sum + idr * h.amount
     }, 0)
-  }, [state.holdings, livePrices, fxRate])
+  }, [holdings, livePrices, fxRate])
 
   const liveValueUsd = useMemo(() => liveValue / (fxRate || 16000), [liveValue, fxRate])
 
   const totalCost = useMemo(
-    () => state.holdings.reduce((sum, h) => sum + (h.costBasis || 0) * h.amount, 0),
-    [state.holdings],
+    () => holdings.reduce((sum, h) => sum + (h.costBasis || 0) * h.amount, 0),
+    [holdings],
   )
 
   const totalBuffer = useMemo(
-    () => state.buffers.reduce((sum, b) => sum + b.amount, 0),
-    [state.buffers],
+    () => buffers.reduce((sum, b) => sum + b.amount, 0),
+    [buffers],
   )
 
   const totalTujuan = useMemo(
-    () => state.tujuan.filter(t => !t.isUsed).reduce((sum, t) => sum + t.amount, 0),
-    [state.tujuan],
+    () => tujuan.filter(t => !t.isUsed).reduce((sum, t) => sum + t.amount, 0),
+    [tujuan],
   )
 
   const totalDebt = useMemo(
-    () => serverDebts.reduce((sum, d) => sum + Number(d.remaining || 0), 0),
-    [serverDebts],
+    () => debts.reduce((sum, d) => sum + Number(d.remaining || 0), 0),
+    [debts],
   )
   const totalDebtMonthly = useMemo(
-    () => serverDebts.reduce((sum, d) => sum + Number(d.monthly_payment || 0), 0),
-    [serverDebts],
+    () => debts.reduce((sum, d) => sum + Number(d.monthlyPayment || 0), 0),
+    [debts],
   )
 
   const monthlyCashflow = useMemo(() => {
     const now = new Date()
     const month = now.toISOString().slice(0, 7)
-    const monthEntries = state.cashflow.filter(c => c.date.startsWith(month))
+    const monthEntries = cashflow.filter(c => c.date && c.date.startsWith(month))
     const income = monthEntries.filter(c => c.type === 'income').reduce((s, c) => s + c.amount, 0)
     const expense = monthEntries.filter(c => c.type === 'expense').reduce((s, c) => s + c.amount, 0)
     return { income, expense, net: income - expense }
-  }, [state.cashflow])
+  }, [cashflow])
 
   const profit = liveValue - totalCost
 
@@ -388,7 +165,6 @@ function PortofolioBody() {
         </p>
       )}
 
-      {/* USD/IDR ticker */}
       <div className="mb-4 px-4 py-2 rounded-full bg-[var(--vn-cream)] inline-flex items-center gap-3 text-[12px]">
         <span className="vn-dot vn-pulse" />
         <span className="font-mono">USD/IDR <strong className="text-[var(--vn-forest-dark)]">{fxRate.toLocaleString('id-ID')}</strong></span>
@@ -411,7 +187,7 @@ function PortofolioBody() {
           <p className="vn-eyebrow mb-2">Buffer + tujuan</p>
           <p className="vn-display text-[36px] text-[var(--vn-forest-dark)]">{fmt(totalBuffer + totalTujuan)}</p>
           <p className="text-[13px] text-[var(--vn-ink-soft)] mt-1">
-            {state.tujuan.filter(t => !t.isUsed).length} tujuan aktif
+            {tujuan.filter(t => !t.isUsed).length} tujuan aktif
           </p>
         </Bento>
         <Bento padding="lg" tone="mint">
@@ -438,15 +214,15 @@ function PortofolioBody() {
         </Bento>
 
         <Bento padding="lg" className="lg:col-span-3">
-          <p className="vn-eyebrow mb-3">Holding aktif · live ({state.holdings.length})</p>
-          {state.holdings.length === 0 ? (
+          <p className="vn-eyebrow mb-3">Holding aktif · live ({holdings.length})</p>
+          {holdings.length === 0 ? (
             <p className="text-[var(--vn-muted)] text-[14px]">Belum ada holding.</p>
           ) : (
             <ul className="space-y-2">
-              {state.holdings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(h => {
+              {holdings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(h => {
                 const live = livePrices[`${h.kind}:${h.symbol}`]
                 const liveValueIDR = live
-                  ? (live.currency === 'IDR' ? live.price : live.price * 16000) * h.amount
+                  ? (live.currency === 'IDR' ? live.price : live.price * fxRate) * h.amount
                   : (h.costBasis || 0) * h.amount
                 const costValue = (h.costBasis || 0) * h.amount
                 const gain = liveValueIDR - costValue
@@ -475,7 +251,11 @@ function PortofolioBody() {
                       ) : null}
                     </div>
                     <button
-                      onClick={() => removeHolding(h.id)}
+                      onClick={() => setConfirm({
+                        title: 'Hapus holding',
+                        message: `Hapus ${h.symbol} (${KIND_LABEL[h.kind]}) dari portofolio?`,
+                        action: () => removeHolding(h.id),
+                      })}
                       className="text-[12px] text-[var(--vn-red)] hover:underline"
                     >
                       Hapus
@@ -483,23 +263,17 @@ function PortofolioBody() {
                   </li>
                 )
               })}
-            </ul>
-          )}
-          {state.holdings.length > PAGE_SIZE && (
-            <Pagination page={page} total={state.holdings.length} pageSize={PAGE_SIZE} onChange={setPage} />
-          )}
-          <p className="mt-3 text-[11px] text-[var(--vn-muted)]">
-            Harga live dari Yahoo Finance (saham), CoinGecko (crypto), Yahoo FX (cash). Konversi USD/IDR aktif pakai kurs {fxRate.toLocaleString('id-ID')}.
-          </p>
-        </Bento>
-      </div>
+        </ul>
+      )}
+    </Bento>
+  </div>
 
-      {/* Buffers */}
+  {/* Buffers */}
       <Bento padding="lg" className="mb-8">
         <p className="vn-eyebrow mb-3">Dana darurat & money buffer</p>
         <h3 className="vn-headline text-[22px] mb-5">Cadangan likuid kamu.</h3>
         <div className="grid sm:grid-cols-2 gap-4">
-          {state.buffers.map(b => {
+          {buffers.map(b => {
             const ratio = b.target > 0 ? Math.min(1, b.amount / b.target) : 0
             const label = b.kind === 'emergency' ? 'Dana Darurat' : 'Money Buffer'
             return (
@@ -538,16 +312,16 @@ function PortofolioBody() {
         <p className="vn-eyebrow mb-3">Tabungan tujuan</p>
         <h3 className="vn-headline text-[22px] mb-2">Goals yang sedang kamu kejar.</h3>
         <p className="text-[12.5px] text-[var(--vn-muted)] mb-5">
-          Tandai <strong>selesai</strong> ketika target tercapai, dan <strong>terpakai</strong> setelah dana benar-benar digunakan untuk tujuan tersebut.
+          Tandai <strong>selesai</strong> ketika target tercapai, dan <strong>terpakai</strong> setelah dana benar-benar digunakan.
         </p>
         <TujuanForm onAdd={addTujuan} />
         <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {state.tujuan.length === 0 && (
+          {tujuan.length === 0 && (
             <p className="text-[var(--vn-muted)] text-[14px] sm:col-span-2 lg:col-span-3">
               Belum ada tujuan. Tambah dari form di atas.
             </p>
           )}
-          {state.tujuan.map(t => {
+          {tujuan.map(t => {
             const meta = TUJUAN_LABEL[t.category]
             const ratio = t.target > 0 ? Math.min(1, t.amount / t.target) : 0
             const tone = t.isUsed
@@ -569,7 +343,14 @@ function PortofolioBody() {
                     </p>
                     <p className="vn-headline text-[16px] mt-0.5">{t.name}</p>
                   </div>
-                  <button onClick={() => removeTujuan(t.id)} className="text-[11px] text-[var(--vn-red)] hover:underline">
+                  <button
+                    onClick={() => setConfirm({
+                      title: 'Hapus tujuan',
+                      message: `Hapus tujuan "${t.name}"?`,
+                      action: () => removeTujuan(t.id),
+                    })}
+                    className="text-[11px] text-[var(--vn-red)] hover:underline"
+                  >
                     Hapus
                   </button>
                 </div>
@@ -628,10 +409,23 @@ function PortofolioBody() {
       </Bento>
 
       {/* Hutang */}
-      <DebtSection debts={serverDebts} totalDebt={totalDebt} totalMonthly={totalDebtMonthly} onChange={refreshDebts} />
+      <DebtSection
+        debts={debts}
+        totalDebt={totalDebt}
+        totalMonthly={totalDebtMonthly}
+        onAdd={addDebt}
+        onRemove={removeDebt}
+        onRefresh={() => refetch()}
+      />
 
       {/* Auto-cashflow rules */}
-      <CashflowRulesSection rules={serverRules} onChange={refreshRules} />
+      <CashflowRulesSection
+        rules={cashflowRules}
+        onAdd={addCashflowRule}
+        onToggle={toggleCashflowRule}
+        onRemove={removeCashflowRule}
+        onRefresh={() => refetch()}
+      />
 
       {/* Cashflow */}
       <Bento padding="lg">
@@ -645,10 +439,10 @@ function PortofolioBody() {
         </p>
         <CashflowForm onAdd={addCash} />
         <ul className="mt-5 space-y-2">
-          {state.cashflow.length === 0 && (
+          {cashflow.length === 0 && (
             <p className="text-[var(--vn-muted)] text-[14px]">Belum ada catatan.</p>
           )}
-          {state.cashflow.slice((cashPage - 1) * PAGE_SIZE, cashPage * PAGE_SIZE).map(c => (
+          {cashflow.slice((cashPage - 1) * PAGE_SIZE, cashPage * PAGE_SIZE).map(c => (
             <li
               key={c.id}
               className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 bg-[var(--vn-bg-deep)] rounded-2xl px-4 py-2.5"
@@ -665,14 +459,32 @@ function PortofolioBody() {
               >
                 {c.type === 'income' ? '+' : '−'}{fmt(c.amount)}
               </p>
-              <button onClick={() => removeCash(c.id)} className="text-[11px] text-[var(--vn-red)] hover:underline">
+              <button
+                onClick={() => setConfirm({
+                  title: 'Hapus catatan',
+                  message: `Hapus catatan "${c.category}" Rp${c.amount.toLocaleString('id-ID')}?`,
+                  action: () => removeCash(c.id),
+                })}
+                className="text-[11px] text-[var(--vn-red)] hover:underline"
+              >
                 Hapus
               </button>
             </li>
           ))}
         </ul>
-        <Pagination page={cashPage} total={state.cashflow.length} pageSize={PAGE_SIZE} onChange={setCashPage} />
+        <Pagination page={cashPage} total={cashflow.length} pageSize={PAGE_SIZE} onChange={setCashPage} />
       </Bento>
+
+      <ConfirmModal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => confirm?.action()}
+        title={confirm?.title || 'Konfirmasi'}
+        message={confirm?.message || ''}
+        variant="danger"
+        confirmLabel="Ya, hapus"
+        cancelLabel="Batal"
+      />
     </>
   )
 }
@@ -682,29 +494,28 @@ function PortofolioBody() {
 /* ============================================================== */
 
 function DebtSection({
-  debts, totalDebt, totalMonthly, onChange,
-}: { debts: any[]; totalDebt: number; totalMonthly: number; onChange: () => void }) {
+  debts, totalDebt, totalMonthly, onAdd, onRemove, onRefresh,
+}: {
+  debts: any[]
+  totalDebt: number
+  totalMonthly: number
+  onAdd: (d: any) => Promise<void>
+  onRemove: (id: number) => Promise<void>
+  onRefresh: () => void
+}) {
   const [name, setName] = useState('')
   const [kind, setKind] = useState('pinjaman')
   const [principal, setPrincipal] = useState(0)
   const [remaining, setRemaining] = useState(0)
   const [monthlyPayment, setMonthlyPayment] = useState(0)
+  const [confirmDebt, setConfirmDebt] = useState<{ id: number; name: string } | null>(null)
 
   async function add() {
     if (!getPin()) return alert('Unlock PIN dulu untuk simpan ke server.')
     if (!name.trim() || !principal) return
-    await fetch(`${API}/api/me/debts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...pinHeader() },
-      body: JSON.stringify({ name, kind, principal, remaining: remaining || principal, monthlyPayment }),
-    })
+    await onAdd({ name, kind, principal, remaining: remaining || principal, monthlyPayment })
     setName(''); setPrincipal(0); setRemaining(0); setMonthlyPayment(0)
-    onChange()
-  }
-
-  async function remove(id: number) {
-    await fetch(`${API}/api/me/debts/${id}`, { method: 'DELETE', headers: pinHeader() })
-    onChange()
+    onRefresh()
   }
 
   return (
@@ -735,7 +546,7 @@ function DebtSection({
         <p className="text-[var(--vn-muted)] text-[14px]">Belum ada hutang tercatat.</p>
       ) : (
         <ul className="space-y-2">
-          {debts.map(d => (
+          {debts.map((d: any) => (
             <li key={d.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 bg-[var(--vn-bg-deep)] rounded-2xl px-4 py-3">
               <div>
                 <p className="font-semibold text-[14px]">{d.name}</p>
@@ -743,11 +554,26 @@ function DebtSection({
               </div>
               <p className="text-[13px] text-[var(--vn-red)]">{fmt(d.remaining)}</p>
               <p className="text-[12px] text-[var(--vn-muted)]">{d.monthly_payment ? `${fmt(d.monthly_payment)}/bln` : '—'}</p>
-              <button onClick={() => remove(d.id)} className="text-[12px] text-[var(--vn-red)] hover:underline">Hapus</button>
+              <button
+                onClick={() => setConfirmDebt({ id: d.id, name: d.name })}
+                className="text-[12px] text-[var(--vn-red)] hover:underline">Hapus</button>
             </li>
           ))}
         </ul>
       )}
+      <ConfirmModal
+        open={!!confirmDebt}
+        onClose={() => setConfirmDebt(null)}
+        onConfirm={() => {
+          if (confirmDebt) onRemove(confirmDebt.id)
+          setConfirmDebt(null)
+        }}
+        title="Hapus hutang"
+        message={confirmDebt ? `Hapus "${confirmDebt.name}" dari daftar hutang?` : ''}
+        variant="danger"
+        confirmLabel="Ya, hapus"
+        cancelLabel="Batal"
+      />
     </Bento>
   )
 }
@@ -756,35 +582,28 @@ function DebtSection({
 /* Auto-cashflow rules section                                      */
 /* ============================================================== */
 
-function CashflowRulesSection({ rules, onChange }: { rules: CashflowRule[]; onChange: () => void }) {
+function CashflowRulesSection({
+  rules, onAdd, onToggle, onRemove, onRefresh,
+}: {
+  rules: CashflowRule[]
+  onAdd: (r: any) => Promise<void>
+  onToggle: (r: CashflowRule) => Promise<void>
+  onRemove: (id: number) => Promise<void>
+  onRefresh: () => void
+}) {
   const [kind, setKind] = useState<'income' | 'expense'>('income')
   const [category, setCategory] = useState('')
   const [amount, setAmount] = useState(0)
   const [schedule, setSchedule] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
   const [dayOfMonth, setDayOfMonth] = useState(25)
+  const [confirmRule, setConfirmRule] = useState<{ id: number; name: string } | null>(null)
 
   async function add() {
     if (!getPin()) return alert('Unlock PIN dulu.')
     if (!category.trim() || !amount) return
-    await fetch(`${API}/api/me/cashflow-rules`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...pinHeader() },
-      body: JSON.stringify({ kind, category, amount, schedule, dayOfMonth }),
-    })
+    await onAdd({ kind, category, amount, schedule, dayOfMonth })
     setCategory(''); setAmount(0)
-    onChange()
-  }
-  async function toggle(r: CashflowRule) {
-    await fetch(`${API}/api/me/cashflow-rules/${r.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...pinHeader() },
-      body: JSON.stringify({ active: !r.active }),
-    })
-    onChange()
-  }
-  async function remove(id: number) {
-    await fetch(`${API}/api/me/cashflow-rules/${id}`, { method: 'DELETE', headers: pinHeader() })
-    onChange()
+    onRefresh()
   }
 
   return (
@@ -831,14 +650,29 @@ function CashflowRulesSection({ rules, onChange }: { rules: CashflowRule[]; onCh
               <p className={`text-[13px] font-semibold font-mono ${r.kind === 'income' ? 'text-[var(--vn-forest-dark)]' : 'text-[var(--vn-red)]'}`}>
                 {r.kind === 'income' ? '+' : '−'}{fmt(r.amount)}
               </p>
-              <button onClick={() => toggle(r)} className="text-[11px] underline text-[var(--vn-forest)]">
+              <button onClick={() => onToggle(r)} className="text-[11px] underline text-[var(--vn-forest)]">
                 {r.active ? 'Pause' : 'Resume'}
               </button>
-              <button onClick={() => remove(r.id)} className="text-[11px] text-[var(--vn-red)] hover:underline">Hapus</button>
+              <button
+                onClick={() => setConfirmRule({ id: r.id, name: r.category })}
+                className="text-[11px] text-[var(--vn-red)] hover:underline">Hapus</button>
             </li>
           ))}
         </ul>
       )}
+      <ConfirmModal
+        open={!!confirmRule}
+        onClose={() => setConfirmRule(null)}
+        onConfirm={() => {
+          if (confirmRule) onRemove(confirmRule.id)
+          setConfirmRule(null)
+        }}
+        title="Hapus aturan"
+        message={confirmRule ? `Hapus aturan auto-cashflow "${confirmRule.name}"?` : ''}
+        variant="danger"
+        confirmLabel="Ya, hapus"
+        cancelLabel="Batal"
+      />
     </Bento>
   )
 }
@@ -856,7 +690,6 @@ function HoldingForm({ onAdd }: { onAdd: (h: Omit<Holding, 'id'>) => void }) {
   const [query, setQuery] = useState('')
   const [openDropdown, setOpenDropdown] = useState(false)
 
-  // Load options on kind change
   useEffect(() => {
     setSymbol('')
     setQuery('')

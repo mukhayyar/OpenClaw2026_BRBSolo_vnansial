@@ -196,6 +196,80 @@ export default function KesehatanFinansial() {
         </div>
       </div>
 
+      {/* Formula breakdown */}
+      <Bento padding="lg" className="mt-8">
+        <p className="vn-eyebrow mb-3">Bagaimana skor dihitung?</p>
+        <h3 className="vn-headline text-[22px] mb-1">Rumus & metodologi.</h3>
+        <p className="text-[13px] text-[var(--vn-muted)] mb-5">
+          Skor dihitung dari 4 pilar, masing-masing maksimal 25 poin. Semakin sehat rasiomu, semakin tinggi skornya.
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FormulaCard
+            title="1. Anggaran (Budget)"
+            inputs={`Penghasilan: ${fmt(input.monthlyIncome)}\nPengeluaran: ${fmt(input.monthlyExpense)}`}
+            formula={`Ratio = Pengeluaran ÷ Penghasilan = ${(input.monthlyExpense / input.monthlyIncome).toFixed(2)}`}
+            scoring={[
+              'Ratio ≤ 0.5 → 25 poin',
+              'Ratio 0.8 → 18 poin',
+              'Ratio 1.0 → 8 poin',
+              'Ratio > 1.2 → 0 poin',
+            ]}
+            result={`Score = ${result.pillars.budget.score}/25 | ${result.pillars.budget.verdict}`}
+          />
+          <FormulaCard
+            title="2. Dana Darurat"
+            inputs={`Saldo: ${fmt(input.emergencyFund)}\nPengeluaran/bulan: ${fmt(input.monthlyExpense)}`}
+            formula={`Bulan = Dana Darurat ÷ Pengeluaran = ${(input.emergencyFund / (input.monthlyExpense || 1)).toFixed(1)} bulan`}
+            scoring={[
+              '0 bulan → 0 poin',
+              '3 bulan → 15 poin',
+              '6 bulan → 25 poin (cap)',
+              'Target ideal: 3-6 bulan pengeluaran',
+            ]}
+            result={`Score = ${result.pillars.emergencyFund.score}/25 | ${result.pillars.emergencyFund.verdict}`}
+          />
+          <FormulaCard
+            title="3. Hutang (Debt-to-Income)"
+            inputs={`Total hutang: ${fmt(input.totalDebt)}\nPenghasilan/tahun: ${fmt(input.monthlyIncome * 12)}`}
+            formula={`DTI = Hutang ÷ (Penghasilan × 12) = ${(input.totalDebt / (input.monthlyIncome * 12 || 1)).toFixed(2)}`}
+            scoring={[
+              'DTI 0 → 25 poin',
+              'DTI 0.36 → 18 poin (batas sehat)',
+              'DTI 0.6 → 9 poin',
+              'DTI > 1.0 → 0 poin',
+            ]}
+            result={`Score = ${result.pillars.debt.score}/25 | ${result.pillars.debt.verdict}`}
+          />
+          <FormulaCard
+            title="4. Tabungan (Savings Rate)"
+            inputs={`Tabungan/bulan: ${fmt(input.monthlySavings)}\nPenghasilan: ${fmt(input.monthlyIncome)}`}
+            formula={`Rate = Tabungan ÷ Penghasilan = ${((input.monthlySavings / (input.monthlyIncome || 1)) * 100).toFixed(1)}%`}
+            scoring={[
+              'Rate 0% → 0 poin',
+              'Rate 10% → 12.5 poin',
+              'Rate 20% → 25 poin (cap)',
+              'Target ideal: minimal 20% (rumus 50/30/20)',
+            ]}
+            result={`Score = ${result.pillars.savings.score}/25 | ${result.pillars.savings.verdict}`}
+          />
+        </div>
+
+        <div className="mt-5 p-4 rounded-2xl bg-[var(--vn-cream)]">
+          <p className="text-[13px] text-[var(--vn-forest-dark)] font-semibold mb-1">Total Skor</p>
+          <p className="text-[12px] text-[var(--vn-ink-soft)]">
+            {result.pillars.budget.score} (Anggaran) + {result.pillars.emergencyFund.score} (Dana Darurat) + {result.pillars.debt.score} (Hutang) + {result.pillars.savings.score} (Tabungan) = <strong>{result.score}/100</strong>
+            {' → '}
+            <strong>{result.overall}</strong>
+            {result.score >= 85 ? ' — kondisi finansial sangat prima!' :
+             result.score >= 70 ? ' — sudah sehat, tinggal optimalkan tabungan & investasi.' :
+             result.score >= 50 ? ' — cukup, ada beberapa area yang perlu perhatian.' :
+             result.score >= 30 ? ' — perlu perhatian di beberapa pilar penting.' :
+             ' — butuh perbaikan mendasar di hampir semua pilar.'}
+          </p>
+        </div>
+      </Bento>
+
       {/* Recommendations */}
       <Bento padding="lg" tone="ink" className="mt-8">
         <p className="vn-eyebrow !text-[var(--vn-mint)] mb-3">Langkah selanjutnya</p>
@@ -252,6 +326,34 @@ function Field({
       <div className="mt-2">
         <MoneyInput value={value} onChange={onChange} />
       </div>
+    </div>
+  )
+}
+
+function FormulaCard({
+  title,
+  inputs,
+  formula,
+  scoring,
+  result,
+}: {
+  title: string
+  inputs: string
+  formula: string
+  scoring: string[]
+  result: string
+}) {
+  return (
+    <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+      <p className="vn-headline text-[15px] font-semibold mb-2">{title}</p>
+      <pre className="text-[11px] text-[var(--vn-muted)] font-mono mb-2 whitespace-pre-line">{inputs}</pre>
+      <p className="text-[12px] text-[var(--vn-forest-dark)] font-mono mb-2">
+        <strong>{formula}</strong>
+      </p>
+      <ul className="text-[11px] text-[var(--vn-ink-soft)] space-y-0.5 mb-2">
+        {scoring.map((s, i) => <li key={i}>• {s}</li>)}
+      </ul>
+      <p className="text-[12px] font-semibold text-[var(--vn-forest-dark)]">{result}</p>
     </div>
   )
 }

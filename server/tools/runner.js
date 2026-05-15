@@ -32,7 +32,7 @@ import {
   listHealthHistory,
 } from './portfolio.js'
 import { checkBankAccount, checkPhoneNumber } from '../lib/scamCheck.js'
-import { renderChart } from './charts.js'
+import { renderChart, renderTechnicalAnalysis } from './charts.js'
 import { createPriceAlert, listUserAlerts, deleteUserAlert } from './alerts.js'
 import { askOtherAgent } from './delegate.js'
 import { assessDexToken, searchDex } from '../lib/dexscreener.js'
@@ -47,6 +47,10 @@ import {
   dbListTables, dbDescribeTable, dbExecute,
   installPackage, listInstallablePackages,
 } from './admin.js'
+import {
+  saveCashflowEntry, listUserCashflowEntries, deleteUserCashflowEntry,
+  findUserData,
+} from './data.js'
 
 export async function runTool(name, args) {
   switch (name) {
@@ -104,6 +108,8 @@ export async function runTool(name, args) {
       return checkPhoneNumber(args)
     case 'render_chart':
       return renderChart(args)
+    case 'render_technical_analysis':
+      return renderTechnicalAnalysis(args)
     case 'create_price_alert':
       return createPriceAlert(args)
     case 'list_price_alerts':
@@ -156,6 +162,14 @@ export async function runTool(name, args) {
       return installPackage(args)
     case 'list_installable_packages':
       return listInstallablePackages()
+    case 'save_cashflow_entry':
+      return saveCashflowEntry(args)
+    case 'list_cashflow_entries':
+      return listUserCashflowEntries(args)
+    case 'delete_cashflow_entry':
+      return deleteUserCashflowEntry(args)
+    case 'find_user_data':
+      return findUserData(args)
     default:
       return { error: `Unknown tool: ${name}` }
   }

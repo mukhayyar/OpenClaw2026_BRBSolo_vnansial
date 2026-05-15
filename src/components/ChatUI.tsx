@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ChatMessage, ToolLog } from '../lib/chatApi'
 import TradingChart from './TradingChart'
+import TechnicalChart from './TechnicalChart'
 import { renderMarkdown } from '../lib/markdown'
 
 const TOOL_LABELS: Record<string, string> = {
@@ -52,22 +53,37 @@ type Props = {
 }
 
 /**
- * Parse `[[chart:kind:symbol:range]]` markers in assistant content.
- * Returns alternating text + chart fragments so they render in order.
+ * Parse `[[chart:kind:symbol:range]]` and `[[ta:kind:symbol:range:indicators]]`
+ * markers in assistant content. Returns alternating text + chart fragments.
  */
 function splitChartMarkers(content: string) {
-  const re = /\[\[chart:(saham|crypto):([A-Za-z0-9._-]+)(?::(1mo|3mo|6mo|1y))?\]\]/g
-  const parts: Array<{ type: 'text'; value: string } | { type: 'chart'; kind: 'saham' | 'crypto'; symbol: string; range: string }> = []
+  const re = /\[\[(chart|ta):(saham|crypto):([A-Za-z0-9._-]+):(1mo|3mo|6mo|1y)(?::([a-z,]+))?\]\]/g
+  const parts: Array<
+    | { type: 'text'; value: string }
+    | { type: 'chart'; kind: 'saham' | 'crypto'; symbol: string; range: string }
+    | { type: 'ta'; kind: 'saham' | 'crypto'; symbol: string; range: string; indicators: string }
+  > = []
   let last = 0
   let m: RegExpExecArray | null
   while ((m = re.exec(content)) !== null) {
     if (m.index > last) parts.push({ type: 'text', value: content.slice(last, m.index) })
-    parts.push({
-      type: 'chart',
-      kind: m[1] as 'saham' | 'crypto',
-      symbol: m[2],
-      range: (m[3] as '1mo' | '3mo' | '6mo' | '1y') || '3mo',
-    })
+    const markerType = m[1]
+    if (markerType === 'ta') {
+      parts.push({
+        type: 'ta',
+        kind: m[2] as 'saham' | 'crypto',
+        symbol: m[3],
+        range: m[4] as '1mo' | '3mo' | '6mo' | '1y',
+        indicators: m[5] || 'ma,bollinger',
+      })
+    } else {
+      parts.push({
+        type: 'chart',
+        kind: m[2] as 'saham' | 'crypto',
+        symbol: m[3],
+        range: (m[4] as '1mo' | '3mo' | '6mo' | '1y') || '3mo',
+      })
+    }
     last = m.index + m[0].length
   }
   if (last < content.length) parts.push({ type: 'text', value: content.slice(last) })
@@ -244,15 +260,21 @@ function AssistantContent({ content }: { content: string }) {
   const parts = useMemo(() => splitChartMarkers(content), [content])
   return (
     <div className="space-y-3">
-      {parts.map((p, i) =>
-        p.type === 'text' ? (
-          <div key={i}>{renderMarkdown(p.value)}</div>
-        ) : (
+      {parts.map((p, i) => {
+        if (p.type === 'text') return <div key={i}>{renderMarkdown(p.value)}</div>
+        if (p.type === 'ta') {
+          return (
+            <div key={i} className="not-prose">
+              <TechnicalChart kind={p.kind} symbol={p.symbol} range={p.range} height={260} />
+            </div>
+          )
+        }
+        return (
           <div key={i} className="not-prose">
             <TradingChart kind={p.kind} symbol={p.symbol} range={p.range as any} height={180} showAxis={false} />
           </div>
-        ),
-      )}
+        )
+      })}
     </div>
   )
 }

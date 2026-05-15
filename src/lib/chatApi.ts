@@ -37,10 +37,29 @@ export async function sendAgentChat(
 }
 
 export function emitToolToasts(toolCalls: ToolLog[]) {
+  const PORTFOLIO_MODIFY_TOOLS = new Set([
+    'add_portfolio_holding', 'remove_portfolio_holding', 'update_money_buffer',
+    'get_user_portfolio',
+    'add_debt', 'update_debt', 'remove_debt', 'list_debts',
+    'create_cashflow_rule', 'toggle_cashflow_rule', 'delete_cashflow_rule', 'list_cashflow_rules',
+    'save_cashflow_entry', 'list_cashflow_entries', 'delete_cashflow_entry',
+    'save_health_score', 'list_health_history',
+    'find_user_data',
+  ])
+
+  let shouldSyncPortfolio = false
+
   for (const t of toolCalls) {
     window.dispatchEvent(
       new CustomEvent('vn-tool', { detail: { name: t.name } }),
     )
+    if (PORTFOLIO_MODIFY_TOOLS.has(t.name)) {
+      shouldSyncPortfolio = true
+    }
+  }
+
+  if (shouldSyncPortfolio) {
+    window.dispatchEvent(new CustomEvent('vn-portfolio-sync'))
   }
 }
 

@@ -294,7 +294,7 @@ export const TOOL_DEFINITIONS = [
     function: {
       name: 'add_portfolio_holding',
       description:
-        'Tambah atau update satu holding di portofolio user (saham, crypto, reksadana, obligasi, logam). Butuh PIN.',
+        'Tambah atau update satu holding di portofolio user (saham, crypto, reksadana, obligasi, logam). Butuh PIN. PENTING: untuk saham IDX, 1 LOT = 100 LEMBAR. Kalau user sebut "50 lot BBCA", amount = 5000 (50×100). Jangan simpan angka lot mentah.',
       parameters: {
         type: 'object',
         properties: {
@@ -423,6 +423,24 @@ export const TOOL_DEFINITIONS = [
           kind: { type: 'string', enum: ['saham', 'crypto'] },
           symbol: { type: 'string', description: 'Ticker atau coin id, contoh BBCA atau bitcoin' },
           range: { type: 'string', enum: ['1mo', '3mo', '6mo', '1y'], description: 'Rentang waktu, default 3mo' },
+        },
+        required: ['kind', 'symbol'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'render_technical_analysis',
+      description:
+        'Minta UI menampilkan grafik analisa teknikal lengkap dengan indikator MA20, MA50, dan Bollinger Bands. Gunakan saat user minta analisa teknikal, chart pattern, support/resistance. Hasilnya adalah grafik interaktif dengan garis MA, Bollinger Bands, dan volume. Wajib sertakan field "marker" dari hasilnya di jawabanmu.',
+      parameters: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['saham', 'crypto'] },
+          symbol: { type: 'string', description: 'Ticker atau coin id, contoh BBCA atau bitcoin' },
+          range: { type: 'string', enum: ['1mo', '3mo', '6mo', '1y'], description: 'Rentang waktu, default 3mo' },
+          indicators: { type: 'array', items: { type: 'string', enum: ['ma', 'bollinger', 'volume'] }, description: 'Indikator yang diinginkan, default ["ma","bollinger","volume"]' },
         },
         required: ['kind', 'symbol'],
       },
@@ -781,9 +799,58 @@ export const TOOL_DEFINITIONS = [
   {
     type: 'function',
     function: {
-      name: 'list_installable_packages',
-      description: 'Daftar package npm yang diizinkan untuk diinstall lewat agent.',
-      parameters: { type: 'object', properties: {} },
+      name: 'save_cashflow_entry',
+      description:
+        'Simpan satu entri cashflow (pemasukan atau pengeluaran) ke database user. Pakai ini setiap kali user menyebut nominal transaksi, gaji, pengeluaran, atau minta mencatat keuangan. Wajib PIN. Contoh: user bilang "gajian 14.3 juta tgl 25" → simpan sebagai income.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          date: { type: 'string', description: 'Tanggal transaksi (YYYY-MM-DD)' },
+          category: { type: 'string', description: 'Kategori — Gaji, Makan, Transport, Listrik, Internet, dll.' },
+          type: { type: 'string', enum: ['income', 'expense'] },
+          amount: { type: 'number', description: 'Nominal dalam Rupiah' },
+          note: { type: 'string' },
+        },
+        required: ['pin', 'date', 'category', 'type', 'amount'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_cashflow_entries',
+      description: 'Lihat daftar entri cashflow user (yang sudah tercatat). Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' }, limit: { type: 'integer' } },
+        required: ['pin'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_cashflow_entry',
+      description: 'Hapus satu entri cashflow berdasarkan id. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' }, id: { type: 'integer' } },
+        required: ['pin', 'id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'find_user_data',
+      description:
+        'Ambil snapshot lengkap data keuangan user: holding, buffer, hutang, aturan cashflow, dan entri cashflow terbaru. Pakai ini untuk memahami kondisi finansial user secara menyeluruh sebelum memberi advice. Butuh PIN.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' } },
+        required: ['pin'],
+      },
     },
   },
 ]

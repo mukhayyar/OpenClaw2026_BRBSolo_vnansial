@@ -63,6 +63,9 @@ import {
   createCashflowRule as dbCreateCashflowRule,
   updateCashflowRule as dbUpdateCashflowRule,
   deleteCashflowRule as dbDeleteCashflowRule,
+  listCashflowEntries as dbListCashflowEntries,
+  createCashflowEntry as dbCreateCashflowEntry,
+  deleteCashflowEntry as dbDeleteCashflowEntry,
 } from './lib/db.js'
 import { computeNextFire } from './tools/finance.js'
 import { AGENT_PRESETS, findAgent } from './agent/presets.js'
@@ -327,6 +330,29 @@ app.patch('/api/me/cashflow-rules/:id', requirePin, (req, res) => {
 })
 app.delete('/api/me/cashflow-rules/:id', requirePin, (req, res) => {
   dbDeleteCashflowRule(Number(req.params.id))
+  res.json({ ok: true })
+})
+
+// ----- Cashflow entries -------------------------------------------
+app.get('/api/me/cashflow-entries', requirePin, (req, res) => {
+  res.json({ entries: dbListCashflowEntries(req.user.id) })
+})
+app.post('/api/me/cashflow-entries', requirePin, (req, res) => {
+  const { date, category, type, amount, note } = req.body || {}
+  if (!date || !category || !type || !Number.isFinite(Number(amount))) {
+    return res.status(400).json({ error: 'date, category, type, amount required' })
+  }
+  if (!['income', 'expense'].includes(type)) {
+    return res.status(400).json({ error: 'type must be income or expense' })
+  }
+  const row = dbCreateCashflowEntry({
+    user_id: req.user.id, date, category, type, amount: Number(amount),
+    note: note || null, source: 'ai',
+  })
+  res.json(row)
+})
+app.delete('/api/me/cashflow-entries/:id', requirePin, (req, res) => {
+  dbDeleteCashflowEntry(Number(req.params.id))
   res.json({ ok: true })
 })
 

@@ -52,7 +52,7 @@ each other and to humans.
 - Security: do *not* file public issues. Email maintainer or DM via the
   contact in `README.md`.
 
-## Working with the AI Asisten
+## Working with the AI Assistant
 The agent uses tool-calling. When you add a tool:
 - Add the wrapper in `server/tools/runner.js`.
 - Add the schema in `server/tools/definitions.js`.

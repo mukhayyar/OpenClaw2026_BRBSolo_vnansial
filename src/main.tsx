@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import Layout from './components/Layout'
 import Landing from './pages/Landing'
@@ -18,27 +19,35 @@ import Portofolio from './pages/Portofolio'
 import SettingsPage from './pages/Settings'
 import Komoditas from './pages/Komoditas'
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 10_000 },
+  },
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Landing />} />
-          <Route path="/kesehatan" element={<KesehatanFinansial />} />
-          <Route path="/cek-investasi" element={<CekInvestasi />} />
-          <Route path="/emiten" element={<CekEmiten />} />
-          <Route path="/crypto" element={<CryptoWatch />} />
-          <Route path="/asuransi" element={<Asuransi />} />
-          <Route path="/portofolio" element={<Portofolio />} />
-          <Route path="/komoditas" element={<Komoditas />} />
-          <Route path="/kalkulator" element={<KalkulatorPinjaman />} />
-          <Route path="/edukasi" element={<Edukasi />} />
-          <Route path="/lapor" element={<LaporPenipuan />} />
-          <Route path="/asisten" element={<AsistenAI />} />
-          <Route path="/rencana-investasi" element={<RencanaInvestasi />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Landing />} />
+            <Route path="/kesehatan" element={<KesehatanFinansial />} />
+            <Route path="/cek-investasi" element={<CekInvestasi />} />
+            <Route path="/emiten" element={<CekEmiten />} />
+            <Route path="/crypto" element={<CryptoWatch />} />
+            <Route path="/asuransi" element={<Asuransi />} />
+            <Route path="/portofolio" element={<Portofolio />} />
+            <Route path="/komoditas" element={<Komoditas />} />
+            <Route path="/kalkulator" element={<KalkulatorPinjaman />} />
+            <Route path="/edukasi" element={<Edukasi />} />
+            <Route path="/lapor" element={<LaporPenipuan />} />
+            <Route path="/asisten" element={<AsistenAI />} />
+            <Route path="/rencana-investasi" element={<RencanaInvestasi />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   </StrictMode>,
 )

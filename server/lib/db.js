@@ -164,6 +164,19 @@ async function tryLoadSqlite() {
         FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS idx_cashflow_rule_pending ON cashflow_rule(active, next_fire_at);
+      CREATE TABLE IF NOT EXISTS cashflow_entry (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        category TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        note TEXT,
+        source TEXT DEFAULT 'manual',
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_cashflow_entry_user ON cashflow_entry(user_id, date);
       CREATE TABLE IF NOT EXISTS token_whitepaper (
         id TEXT PRIMARY KEY,
         kind TEXT NOT NULL,
@@ -221,6 +234,16 @@ export function ensureUser({ telegramChatId = null, nickname = null } = {}) {
         .prepare('SELECT * FROM user WHERE telegram_chat_id = ?')
         .get(String(telegramChatId))
       if (existing) return existing
+    } else {
+      // No telegramChatId — return the first existing user (self-host, single-owner)
+      const first = db.prepare('SELECT * FROM user ORDER BY id LIMIT 1').get()
+      if (first) {
+        if (nickname && !first.nickname) {
+          db.prepare('UPDATE user SET nickname = ? WHERE id = ?').run(nickname, first.id)
+          first.nickname = nickname
+        }
+        return first
+      }
     }
     const stmt = db.prepare(
       'INSERT INTO user (telegram_chat_id, nickname, created_at) VALUES (?, ?, ?)',
@@ -231,6 +254,9 @@ export function ensureUser({ telegramChatId = null, nickname = null } = {}) {
   if (telegramChatId) {
     const found = memList('user').find(u => u.telegram_chat_id === String(telegramChatId))
     if (found) return found
+  } else {
+    const first = memList('user').sort((a, b) => a.id - b.id)[0]
+    if (first) return first
   }
   return memInsert('user', {
     telegram_chat_id: telegramChatId ? String(telegramChatId) : null,
@@ -693,6 +719,36 @@ export function upsertWhitepaper({ id, kind, name, url, summary, updated_by_agen
   const list = mem.get('token_whitepaper') || new Map()
   for (const [k, v] of list) if (v.id === id) list.delete(k)
   return memInsert('token_whitepaper', { id, kind, name, url, summary, updated_at: t, updated_by_agent })
+}
+
+// Cashflow entries ------------------------------------------------
+export function listCashflowEntries(userId, limit = 200) {
+  if (driver === 'sqlite') {
+    return db.prepare('SELECT * FROM cashflow_entry WHERE user_id = ? ORDER BY date DESC, id DESC LIMIT ?').all(userId, limit)
+  }
+  return memList('cashflow_entry')
+    .filter(e => e.user_id === userId)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id - a.id)
+    .slice(0, limit)
+}
+export function createCashflowEntry(row) {
+  const t = now()
+  const r = { source: 'manual', created_at: t, ...row }
+  if (driver === 'sqlite') {
+    const info = db.prepare(
+      'INSERT INTO cashflow_entry (user_id, date, category, type, amount, note, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(r.user_id, r.date, r.category, r.type, r.amount, r.note ?? null, r.source, t)
+    return db.prepare('SELECT * FROM cashflow_entry WHERE id = ?').get(info.lastInsertRowid)
+  }
+  return memInsert('cashflow_entry', r)
+}
+export function deleteCashflowEntry(id) {
+  if (driver === 'sqlite') db.prepare('DELETE FROM cashflow_entry WHERE id = ?').run(id)
+  else {
+    const m = mem.get('cashflow_entry')
+    if (m) m.delete(Number(id))
+  }
+  return true
 }
 
 export function closeDb() {

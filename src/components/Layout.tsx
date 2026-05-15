@@ -13,7 +13,6 @@ const navItems = [
   { path: '/komoditas', label: 'Komoditas' },
   { path: '/portofolio', label: 'Portofolio' },
   { path: '/edukasi', label: 'Edukasi' },
-  { path: '/lapor', label: 'Lapor' },
   { path: '/settings', label: 'Settings' },
 ]
 

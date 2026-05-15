@@ -72,7 +72,7 @@ const TIPS = [
   { title: 'Hak konsumen', content: 'UU 21/2011 mewajibkan OJK melindungimu. Hubungi 157 jika hakmu dilanggar.' },
 ]
 
-type Tab = 'quiz' | 'tips' | 'kalkulator' | 'lapor'
+type Tab = 'quiz' | 'tips' | 'investasi' | 'kalkulator' | 'lapor'
 
 export default function Edukasi() {
   const [currentQ, setCurrentQ] = useState(0)
@@ -100,6 +100,7 @@ export default function Edukasi() {
   const tabs: { id: Tab; label: string; hint: string }[] = [
     { id: 'quiz', label: 'Quiz', hint: 'Uji literasi keuanganmu' },
     { id: 'tips', label: 'Tips', hint: 'Panduan harian' },
+    { id: 'investasi', label: 'Investasi', hint: 'Belajar saham, crypto, komoditas & asuransi' },
     { id: 'kalkulator', label: 'Kalkulator', hint: 'Bunga jujur, anti predator' },
     { id: 'lapor', label: 'Lapor Penipuan', hint: 'Cek rekening/nomor + panduan lapor' },
   ]
@@ -218,6 +219,153 @@ export default function Edukasi() {
               <p className="text-[14px] text-[var(--vn-ink-soft)] leading-relaxed">{tip.content}</p>
             </Bento>
           ))}
+        </div>
+      )}
+
+      {tab === 'investasi' && (
+        <div className="space-y-6">
+          <Bento padding="lg">
+            <p className="vn-eyebrow mb-2">Dasar Investasi</p>
+            <h3 className="vn-headline text-[22px] mb-4">Pahami sebelum mulai.</h3>
+            <div className="grid sm:grid-cols-2 gap-4 text-[13.5px] text-[var(--vn-ink-soft)] leading-relaxed">
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[16px] mb-2">Apa itu investasi?</p>
+                <p>Investasi adalah menempatkan uang di instrumen keuangan dengan harapan nilainya tumbuh seiring waktu. Berbeda dengan tabungan yang hanya disimpan, investasi mengandung risiko — semakin tinggi potensi return, semakin tinggi risikonya.</p>
+                <p className="mt-2"><strong>Aturan emas:</strong> Jangan investasikan uang yang kamu butuhkan dalam 1–2 tahun ke depan. Dana darurat dulu, baru investasi.</p>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[16px] mb-2">Rumus 50/30/20</p>
+                <p>Alokasikan penghasilan bulanan:</p>
+                <ul className="list-disc list-inside mt-1 space-y-0.5">
+                  <li><strong>50%</strong> — Kebutuhan pokok (makan, sewa, listrik, transport)</li>
+                  <li><strong>30%</strong> — Keinginan (hiburan, makan di luar, langganan)</li>
+                  <li><strong>20%</strong> — Tabungan & investasi</li>
+                </ul>
+                <p className="mt-2">Sesuaikan dengan kondisimu — yang penting konsisten menabung & investasi setiap bulan.</p>
+              </div>
+            </div>
+          </Bento>
+
+          {/* Saham IDX */}
+          <Bento padding="lg">
+            <p className="vn-eyebrow mb-2">Saham Indonesia (IDX)</p>
+            <h3 className="vn-headline text-[22px] mb-4">Investasi saham di bursa efek Indonesia.</h3>
+            <div className="grid sm:grid-cols-3 gap-4 text-[13.5px]">
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Apa itu saham?</p>
+                <p className="text-[var(--vn-ink-soft)] leading-relaxed">Saham = bukti kepemilikan perusahaan. Kalau kamu punya 1 lot (100 lembar) saham BBCA, kamu adalah pemilik sebagian kecil Bank BCA. Kamu dapat untung dari kenaikan harga (capital gain) dan pembagian laba (dividen).</p>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Cara mulai</p>
+                <ul className="list-decimal list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li>Buka rekening efek di sekuritas resmi OJK (Mirae, Indopremier, BCA Sekuritas, dll.)</li>
+                  <li>Setor dana awal (mulai Rp 100.000)</li>
+                  <li>Pelajari perusahaan sebelum beli — cek laporan keuangan di halaman /emiten</li>
+                  <li>Mulai dari saham blue chip (BBCA, TLKM, ASII, UNVR) untuk pemula</li>
+                </ul>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Risiko</p>
+                <ul className="list-disc list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li><strong>Volatilitas:</strong> Harga bisa turun 20–50% dalam setahun</li>
+                  <li><strong>Likuiditas:</strong> Saham lapis 2/3 susah dijual cepat</li>
+                  <li><strong>Risiko perusahaan:</strong> Bangkrut, rugi, atau tersangkut hukum</li>
+                  <li><strong>1 lot = 100 lembar</strong> — pastikan hitunganmu benar</li>
+                </ul>
+              </div>
+            </div>
+          </Bento>
+
+          {/* Crypto */}
+          <Bento padding="lg">
+            <p className="vn-eyebrow mb-2">Crypto & Aset Digital</p>
+            <h3 className="vn-headline text-[22px] mb-4">High risk, high reward — pahami sebelum masuk.</h3>
+            <div className="grid sm:grid-cols-3 gap-4 text-[13.5px]">
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Apa itu crypto?</p>
+                <p className="text-[var(--vn-ink-soft)] leading-relaxed">Cryptocurrency adalah aset digital berbasis blockchain. Bitcoin adalah yang pertama (2009) dan terbesar. Tidak diatur bank sentral — nilainya murni dari supply & demand pasar.</p>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Risiko utama</p>
+                <ul className="list-disc list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li><strong>Sangat volatile:</strong> Bisa naik/turun 30% dalam sehari</li>
+                  <li><strong>Scam & rugpull:</strong> Token palsu, proyek abal-abal</li>
+                  <li><strong>Regulasi:</strong> Belum semua negara mengakui crypto</li>
+                  <li><strong>Hilang akses:</strong> Lupa password wallet = uang hilang selamanya</li>
+                </ul>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Tips aman</p>
+                <ul className="list-decimal list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li>Hanya investasi &lt;5% dari total portofolio</li>
+                  <li>Pakai exchange resmi Bappebti (Indodax, Tokocrypto, Pintu)</li>
+                  <li>Cek risk score di halaman /crypto sebelum beli</li>
+                  <li>Jangan FOMO — beli saat merah, bukan saat hype</li>
+                </ul>
+              </div>
+            </div>
+          </Bento>
+
+          {/* Komoditas & Logam Mulia */}
+          <Bento padding="lg">
+            <p className="vn-eyebrow mb-2">Komoditas & Emas</p>
+            <h3 className="vn-headline text-[22px] mb-4">Lindung nilai dengan aset fisik.</h3>
+            <div className="grid sm:grid-cols-3 gap-4 text-[13.5px]">
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Emas (Logam Mulia)</p>
+                <p className="text-[var(--vn-ink-soft)] leading-relaxed">Emas adalah aset safe haven — naik saat ekonomi tidak stabil. Bisa dibeli di Antam (PT Aneka Tambang), Pegadaian, atau platform digital. Return historis 5–8% per tahun. Cocok untuk diversifikasi dan lindung nilai inflasi.</p>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Komoditas lain</p>
+                <ul className="list-disc list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li><strong>Minyak:</strong> Harga dipengaruhi geopolitik & OPEC+. Bisa via ETF atau kontrak berjangka.</li>
+                  <li><strong>Nikel & Batu Bara:</strong> Indonesia eksportir besar. Volatile sesuai permintaan China/India.</li>
+                  <li><strong>CPO (Minyak Sawit):</strong> Komoditas andalan Indonesia. Bisa via saham emiten CPO (AALI, LSIP, SIMP).</li>
+                </ul>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Cara investasi</p>
+                <ul className="list-decimal list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li>Emas fisik: beli di Antam, simpan di brankas</li>
+                  <li>Emas digital: platform seperti Pluang, bareksa</li>
+                  <li>Komoditas via saham: beli emiten tambang di IDX</li>
+                  <li>Komoditas via reksadana: reksadana indeks komoditas</li>
+                </ul>
+              </div>
+            </div>
+          </Bento>
+
+          {/* Asuransi */}
+          <Bento padding="lg">
+            <p className="vn-eyebrow mb-2">Asuransi</p>
+            <h3 className="vn-headline text-[22px] mb-4">Proteksi sebelum investasi.</h3>
+            <div className="grid sm:grid-cols-3 gap-4 text-[13.5px]">
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Kenapa asuransi penting?</p>
+                <p className="text-[var(--vn-ink-soft)] leading-relaxed">Asuransi melindungi kamu dari risiko finansial akibat sakit, kecelakaan, kematian, atau kerugian. Tanpa asuransi, satu kejadian bisa menghabiskan tabungan bertahun-tahun.</p>
+                <p className="mt-2"><strong>Prioritas:</strong> Asuransi kesehatan dulu, baru jiwa, baru yang lain.</p>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Jenis asuransi</p>
+                <ul className="list-disc list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li><strong>Kesehatan:</strong> Rawat inap, operasi, obat. BPJS Kesehatan wajib.</li>
+                  <li><strong>Jiwa:</strong> Santunan untuk ahli waris jika kamu meninggal.</li>
+                  <li><strong>Kendaraan:</strong> Perlindungan mobil/motor dari kecelakaan & pencurian.</li>
+                  <li><strong>Pendidikan:</strong> Dana pendidikan anak jika orang tua meninggal/cacat.</li>
+                </ul>
+              </div>
+              <div className="bg-[var(--vn-bg-deep)] rounded-2xl p-4">
+                <p className="vn-headline text-[15px] mb-2 font-semibold">Tips pilih asuransi</p>
+                <ul className="list-decimal list-inside text-[var(--vn-ink-soft)] leading-relaxed space-y-1">
+                  <li>Pilih perusahaan terdaftar OJK — cek di /asuransi</li>
+                  <li>Jangan beli unitlink sebagai investasi — return-nya rendah</li>
+                  <li>Premi maksimal 10% dari penghasilan bulanan</li>
+                  <li>Baca polis dengan teliti — pahami pengecualian (exclusion)</li>
+                  <li>BPJS Kesehatan sudah mencakup banyak hal dasar</li>
+                </ul>
+              </div>
+            </div>
+          </Bento>
         </div>
       )}
     </PageShell>

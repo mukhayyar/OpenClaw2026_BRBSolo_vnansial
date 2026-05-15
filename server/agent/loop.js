@@ -96,8 +96,12 @@ export async function runAgentChat(messages, options = {}) {
     try { await ctx.onProgress({ phase: 'thinking' }) } catch {}
   }
   const baseExtra = ctx.pin
-    ? `Konteks: user sudah unlock dengan PIN — kamu boleh memanggil tool portofolio/health. Jangan tampilkan PIN ke user.`
-    : `Konteks: user belum unlock PIN. Jika user minta akses portofolio/health-history, jelaskan supaya unlock dulu di halaman /portofolio atau /kesehatan.`
+    ? `Konteks: user sudah unlock dengan PIN — kamu boleh memanggil SEMUA tool portofolio, cashflow, health, dan data.
+
+PENTING: Kamu HARUS proaktif menyimpan data user ke database. Jangan cuma kasih saran — langsung panggil tool untuk simpan! Setiap user sebut nominal uang (gaji, pengeluaran, transaksi) → save_cashflow_entry. Setiap user cerita kondisi keuangan → find_user_data dulu untuk paham konteks (tapi jangan diulang-ulang). Setiap user sebut aset baru → add_portfolio_holding. Jadilah asisten yang BENERAN menyimpan dan mengelola data, bukan cuma ngomong.
+
+JANGAN PERNAH meminta user menyebutkan PIN mereka. PIN sudah ada di sistem dan akan otomatis diisi ke setiap tool call. Kalau ada tool yang minta field "pin", kamu TIDAK PERLU mengisinya — sistem akan inject otomatis. Cukup sebut argumen lainnya saja (kind, symbol, amount, dll).`
+    : `Konteks: user belum unlock PIN (VNANSIAL_PIN belum di-set di server). Kamu TETAP bisa bantu dengan tool yang tidak butuh PIN (cek investasi, kalkulator, market quote, analisis, dll). Jika user minta akses data pribadi (portofolio, cashflow, health history), jelaskan bahwa admin server perlu mengatur VNANSIAL_PIN dulu — SARAN ke user untuk set PIN di halaman web /settings. JANGAN minta user menyebutkan PIN di chat.`
   const systemPrompt = [SYSTEM_PROMPT, agent?.prompt || agent?.system_prompt || null, baseExtra]
     .filter(Boolean)
     .join('\n\n')

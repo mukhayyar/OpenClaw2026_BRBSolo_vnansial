@@ -34,8 +34,10 @@ import { runAgentChat } from '../agent/loop.js'
 import { findAgent } from '../agent/presets.js'
 import {
   buildChartTelegramPayload,
+  buildTechnicalChartPayload,
   extractChartMarkers,
-  stripChartMarkers,
+  extractTechnicalMarkers,
+  stripAllMarkers,
 } from '../lib/chartImage.js'
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN
@@ -80,6 +82,11 @@ const TOOL_LABELS = {
   create_reminder: 'Buat pengingat',
   list_reminders: 'Daftar pengingat',
   delete_reminder: 'Hapus pengingat',
+  save_cashflow_entry: 'Simpan cashflow',
+  list_cashflow_entries: 'Lihat cashflow',
+  delete_cashflow_entry: 'Hapus cashflow',
+  find_user_data: 'Ambil data user',
+  render_technical_analysis: 'Analisa teknikal',
 }
 
 function fmtIDR(n) {
@@ -127,6 +134,7 @@ async function sendPhoto(chatId, photoUrl, caption) {
 const HELP = `*Vnansial Asisten*
 
 Perintah:
+\`/new\` — reset percakapan
 \`/score\` — skor kesehatan finansial terakhir
 \`/quote SYMBOL\` — kutipan saham (AAPL, BBCA.JK)
 \`/crypto ID\` — risk score crypto
@@ -136,7 +144,6 @@ Perintah:
 \`/continue NUM\` — lanjutkan sesi web
 \`/alerts\` — daftar price alert aktif
 \`/reminders\` — daftar pengingat aktif
-\`/bind\` — bind chat ini ke akun web
 
 Atau ketik pertanyaan biasa. Saya bisa:
 • Tampilkan *grafik harga* (image, bukan text)
@@ -144,10 +151,12 @@ Atau ketik pertanyaan biasa. Saya bisa:
 • Buat *pengingat* (cron daemon)
 • Cek *rekening / nomor HP* dari database Kominfo
 • Cek *meme coin* dari DexScreener
-• Akses *portofolio kamu* (perlu PIN dari web)`
+• Akses & kelola *portofolio kamu* (simpan otomatis, tidak perlu ketik PIN)`
 
-// Per-chat /continue context
-const pendingContext = new Map()
+// Per-chat conversation history (rolling last N messages)
+const chatHistory = new Map()
+const MAX_HISTORY = 12
+const HISTORY_TTL_MS = 30 * 60 * 1000 // 30 min inactivity → reset
 
 async function handleAgentTurn(chatId, fromName, messages, agentOpts = {}) {
   // 1. Send initial "thinking" message
@@ -159,7 +168,7 @@ async function handleAgentTurn(chatId, fromName, messages, agentOpts = {}) {
   let lastEdit = 0
   async function flushStatus(extraLine = '') {
     if (!messageId) return
-    if (Date.now() - lastEdit < 900) return // throttle Telegram edits to ~1/sec
+    if (Date.now() - lastEdit < 900) return
     lastEdit = Date.now()
     const body =
       '⚙️ *Bekerja…*\n' +
@@ -187,7 +196,7 @@ async function handleAgentTurn(chatId, fromName, messages, agentOpts = {}) {
     }
   }
 
-  // 3. Run agent
+  // 3. Run agent — ALWAYS inject PIN from env, never ask user
   let result
   try {
     result = await runAgentChat(messages, { ...agentOpts, onProgress, pin: process.env.VNANSIAL_PIN || null })
@@ -200,8 +209,9 @@ async function handleAgentTurn(chatId, fromName, messages, agentOpts = {}) {
     return
   }
 
-  const finalText = stripChartMarkers(result.message || '').trim() || '_(jawaban kosong)_'
+  const finalText = stripAllMarkers(result.message || '').trim() || '_(jawaban kosong)_'
   const charts = extractChartMarkers(result.message)
+  const taCharts = extractTechnicalMarkers(result.message)
 
   // 4. Edit the working message with the final answer + tool summary
   const summary =
@@ -224,16 +234,57 @@ async function handleAgentTurn(chatId, fromName, messages, agentOpts = {}) {
       await reply(chatId, payload.caption)
     }
   }
+
+  // 6. Send technical analysis charts
+  for (const c of taCharts) {
+    const payload = await buildTechnicalChartPayload(c)
+    if (payload.photoUrl) {
+      await sendPhoto(chatId, payload.photoUrl, payload.caption)
+    } else if (payload.caption) {
+      await reply(chatId, payload.caption)
+    }
+  }
+
+  return finalText // return for history tracking
+}
+
+// Helper: get rolling conversation history for a chat
+function getChatMessages(chatId) {
+  const entry = chatHistory.get(chatId)
+  if (!entry || Date.now() - entry.lastAt > HISTORY_TTL_MS) return []
+  return entry.messages
+}
+
+function pushChatMessage(chatId, role, content) {
+  let entry = chatHistory.get(chatId)
+  if (!entry) {
+    entry = { messages: [], lastAt: 0 }
+    chatHistory.set(chatId, entry)
+  }
+  entry.messages.push({ role, content })
+  if (entry.messages.length > MAX_HISTORY) {
+    entry.messages = entry.messages.slice(-MAX_HISTORY)
+  }
+  entry.lastAt = Date.now()
+}
+
+function clearChatHistory(chatId) {
+  chatHistory.delete(chatId)
 }
 
 async function handleCommand(message) {
   const chatId = message.chat.id
+  const userId = message.from?.id
   const text = (message.text || '').trim()
   const [cmd, ...rest] = text.split(/\s+/)
   const arg = rest.join(' ').trim()
-  const user = ensureUser({ telegramChatId: chatId, nickname: message.from?.first_name })
 
-  // Auto-bind chat_id so cron alerts / reminders know where to send
+  if (!userId) return
+
+  const user = ensureUser({ telegramChatId: String(userId), nickname: message.from?.first_name })
+
+  // Auto-bind user's primary chat_id for cron notifications
+  // We store the chat_id keyed by from.id so cron uses the right chat
   try {
     const existing = getSettings(user.id)
     if (!existing || existing.telegram_chat_id !== String(chatId)) {
@@ -247,15 +298,21 @@ async function handleCommand(message) {
 
   try {
     if (cmd === '/start' || cmd === '/bind') {
+      clearChatHistory(chatId)
       await reply(
         chatId,
-        `Halo ${message.from?.first_name || 'di sana'}! Akun Telegram-mu terbind ke Vnansial (chat_id: \`${chatId}\`).\n\n` +
-          `Alert harga & reminder akan masuk ke chat ini.\n\n${HELP}`,
+        `Halo ${message.from?.first_name || 'di sana'}! Akun Telegram-mu terhubung ke Vnansial.\n\n` +
+          `Semua data langsung tersimpan otomatis — tidak perlu ketik PIN lagi. Alert harga & reminder akan masuk ke chat ini.\n\n${HELP}`,
       )
       return
     }
     if (cmd === '/help') {
       await reply(chatId, HELP)
+      return
+    }
+    if (cmd === '/new' || cmd === '/clear') {
+      clearChatHistory(chatId)
+      await reply(chatId, '🧹 Konteks percakapan di-reset. Silakan tanya lagi.')
       return
     }
     if (cmd === '/score') {
@@ -311,8 +368,9 @@ async function handleCommand(message) {
       const s = getSession(id)
       if (!s || s.user_id !== user.id) return reply(chatId, 'Sesi tidak ditemukan.')
       const msgs = listMessages(s.id).slice(-5).map(m => ({ role: m.role, content: m.content }))
-      await reply(chatId, `Lanjut sesi #${s.id} (_${s.title}_, agent ${s.agent_id}). Tulis pertanyaanmu — saya pakai 5 pesan terakhir sebagai konteks.`)
-      pendingContext.set(chatId, { sessionId: s.id, agentId: s.agent_id, history: msgs })
+      clearChatHistory(chatId)
+      for (const m of msgs) pushChatMessage(chatId, m.role, m.content)
+      await reply(chatId, `Lanjut sesi #${s.id} (_${s.title}_, agent ${s.agent_id}). Silakan tulis pertanyaan lanjutan — saya ingat 5 pesan terakhir.`)
       return
     }
     if (cmd === '/alerts') {
@@ -330,18 +388,18 @@ async function handleCommand(message) {
       return
     }
 
-    // /ask or plain text → agent with progressive status edits
+    // /ask or plain text → agent with conversation history
     if (cmd === '/ask' || (!cmd.startsWith('/') && text.length > 1)) {
       const body = cmd === '/ask' ? arg : text
       if (!body) return reply(chatId, 'Tulis pertanyaanmu, contoh: `/ask grafik BBCA 3 bulan`')
 
-      const pend = pendingContext.get(chatId)
-      const messages = pend
-        ? [...pend.history, { role: 'user', content: body }]
-        : [{ role: 'user', content: body }]
-      const agent = pend ? findAgent(pend.agentId) : undefined
-      await handleAgentTurn(chatId, message.from?.first_name, messages, agent ? { agent } : {})
-      if (pend) pendingContext.delete(chatId)
+      // Get rolling history and append user message
+      const history = getChatMessages(chatId)
+      const messages = [...history, { role: 'user', content: body }]
+      pushChatMessage(chatId, 'user', body)
+
+      const answer = await handleAgentTurn(chatId, message.from?.first_name, messages, { agent: findAgent('generalis') })
+      if (answer) pushChatMessage(chatId, 'assistant', answer)
       return
     }
   } catch (err) {
@@ -357,7 +415,15 @@ async function pollOnce() {
       method: 'GET',
     })
     const data = await res.json()
-    if (!data.ok) return
+    if (!data.ok) {
+      if (data.error_code === 409) {
+        console.error('[telegram] Conflict — webhook mungkin masih aktif. Menghapus webhook…')
+        await fetch(`${API}/deleteWebhook?drop_pending_updates=true`)
+      } else {
+        console.error('[telegram] API error', data.description || data.error_code)
+      }
+      return
+    }
     for (const u of data.result || []) {
       lastUpdateId = u.update_id
       if (u.message?.text) await handleCommand(u.message)
@@ -375,7 +441,16 @@ export function startTelegram() {
   }
   if (running) return true
   running = true
-  console.log('[telegram] Bot started, polling for updates…')
+
+  // Delete any existing webhook to ensure long polling works
+  fetch(`${API}/deleteWebhook?drop_pending_updates=true`)
+    .then(() => fetch(`${API}/getMe`))
+    .then(r => r.json())
+    .then(info => {
+      console.log(`[telegram] Bot @${info?.result?.username || 'unknown'} aktif, polling updates…`)
+    })
+    .catch(err => console.error('[telegram] init error', err.message))
+
   ;(async () => {
     while (running) {
       await pollOnce()
