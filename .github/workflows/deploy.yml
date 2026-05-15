@@ -1,0 +1,13 @@
+# Optional deploy workflow — enable when Render/Fly credentials are in GitHub Secrets
+#
+# name: Deploy
+# on:
+#   push:
+#     branches: [main]
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       # Example: render deploy or fly deploy
+#       # - run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}

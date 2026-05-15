@@ -1,0 +1,55 @@
+# Vnansial — Master Plan Index
+Priority: P0
+Status: partial
+Est. time: ongoing
+Last updated: 2026-05-15
+
+## Goal
+Single index for all hackathon handoff `.plan` files — priorities, status, next session entry point.
+
+## Why it matters for judges (scoring rubric tie-in)
+Judges score **Autonomy 30%**, **Creativity 30%**, **Technical 20%**. P0 items directly prove autonomous multi-agent + live demo + clean submission.
+
+## Plan registry
+
+| File | Priority | Status | One-line |
+|------|----------|--------|----------|
+| `sprint-7h-master.plan` | P0 | partial | Hour-by-hour sprint to 23:00 WIB |
+| `ideas-differentiation.plan` | P1 | not_started | 15+ winning angles |
+| `p0-autonomous-demo.plan` | P0 | partial | 2-min video + demo goals |
+| `p0-multi-agent.plan` | P0 | not_started | Orchestrator + specialists |
+| `p0-deploy-live.plan` | P0 | partial | Public URL on Render/Fly |
+| `p0-github-submission.plan` | P0 | partial | Repo + Devpost checklist |
+| `p0-demo-video.plan` | P0 | not_started | Shot list + script |
+| `ai-sumopod-qwen.plan` | P0 | partial | SumoPod qwen3.6-flash agent |
+| `waspada-sqlite.plan` | P1 | not_started | OJK CSV → SQLite search |
+| `discover-challenges.plan` | P1 | not_started | Challenges + Coach agent |
+| `ui-futuristic-web3.plan` | P1 | done | Glass / Web3 UI |
+| `repliz-optional.plan` | P2 | partial | Social scheduling API |
+| `testing-ci.plan` | P1 | partial | Vitest + GitHub Actions |
+| `judge-docs.plan` | P0 | partial | README, AGENT.md, deck |
+| `openclaw-submission.plan` | P0 | partial | Repo naming + history reset |
+| `future-roadmap.plan` | P2 | not_started | Post-hackathon |
+
+## Repo snapshot (2026-05-15)
+- **Remote:** `git@github.com:mukhayyar/OpenClaw2026_BRBSolo_vnansial.git`
+- **History:** 1 root commit (`e983a4c`) — pre-sprint commits removed
+- **Shipped:** React app (6 pages), Express API, tool-calling loop, `/api/agent/test`, glass UI, Repliz tools, Vitest tests + `ci.yml` (add `npm test` script!)
+- **Missing P0:** `/api/agent/run`, `/agen`, multi-agent orchestrator, live deploy URL, demo video, AGENT.md
+
+## Commands / URLs
+```bash
+cd /Users/mukhayyar/Projects/vnansial
+npm run dev          # :5173 + :3001
+curl localhost:3001/api/health
+curl localhost:3001/api/agent/test
+```
+
+## Handoff prompt (copy-paste block for next AI)
+```
+Project: /Users/mukhayyar/Projects/vnansial
+Hackathon: OpenClaw Agenthon 2026, deadline 15 Mei 2026 23:00 WIB, team BRBSolo.
+Read .plan/00-index.plan and sprint-7h-master.plan first.
+P0: implement POST /api/agent/run + /agen UI with agent trace, deploy to Render, record 2-min demo.
+Model: SumoPod qwen3.6-flash via server/lib/openai.js. Do NOT read .env.
+```
