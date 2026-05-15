@@ -4,12 +4,13 @@ import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
 import PinGate from '../components/PinGate'
 import MoneyInput from '../components/MoneyInput'
+import Pagination from '../components/Pagination'
 import { pinHeader, getPin } from '../lib/auth'
 
 const API = import.meta.env.VITE_API_URL || ''
 const STORAGE_KEY = 'vnansial-portfolio-v3'
 
-type AssetKind = 'saham' | 'crypto' | 'reksadana' | 'obligasi' | 'logam'
+type AssetKind = 'saham' | 'crypto' | 'reksadana' | 'obligasi' | 'logam' | 'cash'
 
 type Holding = {
   id: string
@@ -17,6 +18,12 @@ type Holding = {
   symbol: string
   amount: number
   costBasis?: number
+}
+
+const CURRENCIES = ['IDR', 'USD', 'EUR', 'SGD', 'JPY', 'AUD', 'GBP', 'CNY'] as const
+// Simple FX fallback (will be replaced by live USD/IDR from server)
+const FX_TO_IDR_FALLBACK: Record<string, number> = {
+  IDR: 1, USD: 16000, EUR: 17400, SGD: 11800, JPY: 102, AUD: 10500, GBP: 20300, CNY: 2200,
 }
 
 type Buffer = {
@@ -71,6 +78,7 @@ const KIND_LABEL: Record<AssetKind, string> = {
   reksadana: 'Reksadana',
   obligasi: 'Obligasi',
   logam: 'Logam mulia',
+  cash: 'Cash (mata uang)',
 }
 
 const TUJUAN_LABEL: Record<Tujuan['category'], { icon: string; label: string }> = {
@@ -151,6 +159,10 @@ function PortofolioBody() {
   const [livePrices, setLivePrices] = useState<Record<string, { price: number; currency: string }>>({})
   const [serverDebts, setServerDebts] = useState<any[]>([])
   const [serverRules, setServerRules] = useState<CashflowRule[]>([])
+  const [fxRate, setFxRate] = useState<number>(16000)
+  const [page, setPage] = useState(1)
+  const [cashPage, setCashPage] = useState(1)
+  const PAGE_SIZE = 10
 
   // Pull holdings/buffers from server when PIN is set
   useEffect(() => {
@@ -187,6 +199,12 @@ function PortofolioBody() {
       .then(r => r.json())
       .then(d => setServerRules(d.rules || []))
       .catch(() => {})
+
+    // USD/IDR FX
+    fetch(`${API}/api/market/fx`)
+      .then(r => r.json())
+      .then(d => { if (d?.rate) setFxRate(Number(d.rate)) })
+      .catch(() => {})
   }, [])
 
   async function refreshDebts() {
@@ -204,12 +222,12 @@ function PortofolioBody() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [state])
 
-  // Fetch live prices for holdings (Yahoo for saham, CoinGecko for crypto)
+  // Fetch live prices for holdings (Yahoo for saham, CoinGecko for crypto, FX for cash)
   useEffect(() => {
     state.holdings.forEach(async h => {
       try {
         if (h.kind === 'saham') {
-          const sym = h.symbol.includes('.') ? h.symbol : `${h.symbol}.JK`
+          const sym = /^[A-Z]{2,5}$/.test(h.symbol) ? `${h.symbol}.JK` : h.symbol
           const res = await fetch(`${API}/api/market/quote?symbol=${encodeURIComponent(sym)}`)
           const data = await res.json()
           if (data?.regularMarketPrice) {
@@ -221,12 +239,17 @@ function PortofolioBody() {
           if (data?.price) {
             setLivePrices(p => ({ ...p, [`${h.kind}:${h.symbol}`]: { price: data.price, currency: 'USD' } }))
           }
+        } else if (h.kind === 'cash') {
+          // For cash, the "price" is just the FX rate to IDR. Symbol IS the currency code.
+          const ccy = h.symbol.toUpperCase()
+          const rate = ccy === 'USD' ? fxRate : (FX_TO_IDR_FALLBACK[ccy] || 1)
+          setLivePrices(p => ({ ...p, [`${h.kind}:${h.symbol}`]: { price: rate, currency: ccy } }))
         }
       } catch {
         // ignore
       }
     })
-  }, [state.holdings])
+  }, [state.holdings, fxRate])
 
   async function persistHolding(h: Omit<Holding, 'id'>) {
     if (!getPin()) return
@@ -309,12 +332,18 @@ function PortofolioBody() {
   const liveValue = useMemo(() => {
     return state.holdings.reduce((sum, h) => {
       const live = livePrices[`${h.kind}:${h.symbol}`]
-      const ccy = live?.currency || 'IDR'
-      const usdToIdr = 16000 // simple FX assumption; sufficient for relative comparison
-      const idr = live ? (ccy === 'IDR' ? live.price : live.price * usdToIdr) : (h.costBasis || 0)
+      if (!live) return sum + (h.costBasis || 0) * h.amount
+      const ccy = live.currency
+      if (h.kind === 'cash') {
+        // amount is units of the foreign currency, price is fx-to-IDR
+        return sum + h.amount * live.price
+      }
+      const idr = ccy === 'IDR' ? live.price : live.price * (ccy === 'USD' ? fxRate : (FX_TO_IDR_FALLBACK[ccy] || fxRate))
       return sum + idr * h.amount
     }, 0)
-  }, [state.holdings, livePrices])
+  }, [state.holdings, livePrices, fxRate])
+
+  const liveValueUsd = useMemo(() => liveValue / (fxRate || 16000), [liveValue, fxRate])
 
   const totalCost = useMemo(
     () => state.holdings.reduce((sum, h) => sum + (h.costBasis || 0) * h.amount, 0),
@@ -359,11 +388,21 @@ function PortofolioBody() {
         </p>
       )}
 
+      {/* USD/IDR ticker */}
+      <div className="mb-4 px-4 py-2 rounded-full bg-[var(--vn-cream)] inline-flex items-center gap-3 text-[12px]">
+        <span className="vn-dot vn-pulse" />
+        <span className="font-mono">USD/IDR <strong className="text-[var(--vn-forest-dark)]">{fxRate.toLocaleString('id-ID')}</strong></span>
+        <span className="text-[var(--vn-muted)]">· dipakai untuk konversi cash & crypto USD</span>
+      </div>
+
       {/* Summary tiles */}
       <div className="grid lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
         <Bento padding="lg" tone="forest">
           <p className="vn-eyebrow !text-[var(--vn-mint)] mb-2">Nilai aset live</p>
           <p className="vn-display text-[36px] text-white">{fmt(liveValue)}</p>
+          <p className="text-white/70 text-[12px] font-mono mt-1">
+            ≈ ${liveValueUsd.toLocaleString('en-US', { maximumFractionDigits: 0 })} USD
+          </p>
           <p className={`text-[13px] mt-1 ${profit >= 0 ? 'text-[var(--vn-mint)]' : 'text-[var(--vn-red-soft)]'}`}>
             {profit >= 0 ? '↑' : '↓'} {fmt(Math.abs(profit))} vs cost basis
           </p>
@@ -399,12 +438,12 @@ function PortofolioBody() {
         </Bento>
 
         <Bento padding="lg" className="lg:col-span-3">
-          <p className="vn-eyebrow mb-3">Holding aktif · live</p>
+          <p className="vn-eyebrow mb-3">Holding aktif · live ({state.holdings.length})</p>
           {state.holdings.length === 0 ? (
             <p className="text-[var(--vn-muted)] text-[14px]">Belum ada holding.</p>
           ) : (
             <ul className="space-y-2">
-              {state.holdings.map(h => {
+              {state.holdings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(h => {
                 const live = livePrices[`${h.kind}:${h.symbol}`]
                 const liveValueIDR = live
                   ? (live.currency === 'IDR' ? live.price : live.price * 16000) * h.amount
@@ -446,8 +485,11 @@ function PortofolioBody() {
               })}
             </ul>
           )}
+          {state.holdings.length > PAGE_SIZE && (
+            <Pagination page={page} total={state.holdings.length} pageSize={PAGE_SIZE} onChange={setPage} />
+          )}
           <p className="mt-3 text-[11px] text-[var(--vn-muted)]">
-            Harga live dari Yahoo Finance (saham) dan CoinGecko (crypto). USD dikonversi pada kurs estimasi Rp 16.000/USD untuk penjumlahan IDR.
+            Harga live dari Yahoo Finance (saham), CoinGecko (crypto), Yahoo FX (cash). Konversi USD/IDR aktif pakai kurs {fxRate.toLocaleString('id-ID')}.
           </p>
         </Bento>
       </div>
@@ -602,11 +644,11 @@ function PortofolioBody() {
           </strong>
         </p>
         <CashflowForm onAdd={addCash} />
-        <ul className="mt-5 space-y-2 max-h-[420px] overflow-y-auto">
+        <ul className="mt-5 space-y-2">
           {state.cashflow.length === 0 && (
             <p className="text-[var(--vn-muted)] text-[14px]">Belum ada catatan.</p>
           )}
-          {state.cashflow.map(c => (
+          {state.cashflow.slice((cashPage - 1) * PAGE_SIZE, cashPage * PAGE_SIZE).map(c => (
             <li
               key={c.id}
               className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 bg-[var(--vn-bg-deep)] rounded-2xl px-4 py-2.5"
@@ -629,6 +671,7 @@ function PortofolioBody() {
             </li>
           ))}
         </ul>
+        <Pagination page={cashPage} total={state.cashflow.length} pageSize={PAGE_SIZE} onChange={setCashPage} />
       </Bento>
     </>
   )
@@ -834,6 +877,8 @@ function HoldingForm({ onAdd }: { onAdd: (h: Omit<Holding, 'id'>) => void }) {
       setOptions(OBLIGASI_HINTS)
     } else if (kind === 'logam') {
       setOptions(LOGAM_HINTS)
+    } else if (kind === 'cash') {
+      setOptions(CURRENCIES.map(c => ({ value: c, label: c, hint: c })))
     }
   }, [kind])
 

@@ -221,6 +221,26 @@ export async function getHistorical(symbol, range = '3mo') {
   }
 }
 
+/**
+ * USD/IDR exchange rate. Cached 5 min. Falls back to 16000 if upstream fails.
+ */
+export async function getUsdIdr() {
+  const ck = cacheKey('fx', 'USDIDR')
+  const hit = getCached(ck)
+  if (hit) return { ...hit, cached: true }
+  try {
+    const q = await getQuote('IDR=X')
+    const rate = q?.regularMarketPrice
+    if (Number.isFinite(rate)) {
+      const data = { rate, asOf: Date.now(), source: 'yahoo' }
+      setCache(ck, data)
+      return data
+    }
+  } catch {}
+  // Fallback estimate
+  return { rate: 16000, asOf: Date.now(), source: 'fallback' }
+}
+
 /** Clear cache (tests) */
 export function clearYahooCache() {
   cache.clear()

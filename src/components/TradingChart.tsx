@@ -40,7 +40,10 @@ export default function TradingChart({
       try {
         let rows: { x: number; y: number; label: string }[] = []
         if (kind === 'saham') {
-          const sym = symbol.includes('.') ? symbol : `${symbol}.JK`
+          // Append .JK only for plain alphanumeric Indonesian tickers (e.g. BBCA).
+          // US tickers (AAPL), indices (^JKSE), and futures (CL=F) are passed through.
+          const isPlainIDXCode = /^[A-Z]{2,5}$/.test(symbol)
+          const sym = isPlainIDXCode ? `${symbol}.JK` : symbol
           const res = await fetch(`${API}/api/market/history?symbol=${encodeURIComponent(sym)}&range=${range}`)
           const data = await res.json()
           if (data.error || !data.points?.length) throw new Error(data.error || 'no data')

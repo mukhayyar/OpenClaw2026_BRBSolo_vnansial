@@ -206,16 +206,12 @@ Bukti pendukung terlampir.
   },
 ]
 
-export default function LaporPenipuan() {
+export default function LaporPenipuan({ embedded = false }: { embedded?: boolean } = {}) {
   const [activeStep, setActiveStep] = useState(0)
   const [showTemplate, setShowTemplate] = useState<number | null>(null)
 
-  return (
-    <PageShell
-      eyebrow="Perlindungan"
-      title="Lapor cepat. Setiap menit menentukan."
-      subtitle="Panduan praktis 5 langkah, nomor hotline penting, dan template laporan siap pakai."
-    >
+  const body = (
+    <>
       <Bento padding="lg" className="mb-6" tone="ink">
         <p className="vn-eyebrow !text-[var(--vn-mint)] mb-3">Baru tertipu?</p>
         <h3 className="vn-headline text-[24px] sm:text-[28px] mb-3 text-white">
@@ -322,6 +318,17 @@ export default function LaporPenipuan() {
           ))}
         </div>
       </Bento>
+    </>
+  )
+
+  if (embedded) return body
+  return (
+    <PageShell
+      eyebrow="Perlindungan"
+      title="Lapor cepat. Setiap menit menentukan."
+      subtitle="Panduan praktis 5 langkah, nomor hotline penting, dan template laporan siap pakai."
+    >
+      {body}
     </PageShell>
   )
 }

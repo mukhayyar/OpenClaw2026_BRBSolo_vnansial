@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 type Props = {
   value: number
@@ -10,6 +10,8 @@ type Props = {
   prefix?: string
   /** Show as plain locale string (1.000.000) without prefix */
   noPrefix?: boolean
+  /** Optional secondary currency code shown after the value (e.g. USD) */
+  currency?: string
   ariaLabel?: string
 }
 
@@ -18,15 +20,19 @@ type Props = {
  * separators (1.000.000), strips on edit, emits a clean number to the
  * parent. Use anywhere we previously had `<input type="number">` for
  * Rupiah values.
+ *
+ * Uses inline style for padding so `.vn-input { padding: ... }` doesn't
+ * win the cascade over Tailwind utility classes.
  */
 export default function MoneyInput({
   value,
   onChange,
-  placeholder = '0',
+  placeholder = '',
   className = '',
   disabled,
   prefix = 'Rp',
   noPrefix,
+  currency,
   ariaLabel,
 }: Props) {
   const [text, setText] = useState(formatLocale(value))
@@ -41,11 +47,25 @@ export default function MoneyInput({
     onChange(digits ? Number(digits) : 0)
   }
 
+  const leftPad = noPrefix ? undefined : '2.5rem'
+  const rightPad = currency ? '3rem' : undefined
+
   return (
     <div className={`relative ${className}`}>
       {!noPrefix && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[var(--vn-muted)] font-medium pointer-events-none">
+        <span
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[var(--vn-muted)] font-semibold pointer-events-none select-none"
+          aria-hidden
+        >
           {prefix}
+        </span>
+      )}
+      {currency && (
+        <span
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[var(--vn-muted)] font-semibold pointer-events-none select-none uppercase tracking-wider"
+          aria-hidden
+        >
+          {currency}
         </span>
       )}
       <input
@@ -57,7 +77,11 @@ export default function MoneyInput({
         placeholder={placeholder}
         disabled={disabled}
         aria-label={ariaLabel}
-        className={`vn-input ${noPrefix ? '' : 'pl-9'} font-mono`}
+        className="vn-input font-mono"
+        style={{
+          paddingLeft: leftPad,
+          paddingRight: rightPad,
+        }}
       />
     </div>
   )

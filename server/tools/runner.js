@@ -43,6 +43,10 @@ import {
   getTokenWhitepaper, upsertTokenWhitepaper, listTokenWhitepapers,
   analyzeAsset,
 } from './finance.js'
+import {
+  dbListTables, dbDescribeTable, dbExecute,
+  installPackage, listInstallablePackages,
+} from './admin.js'
 
 export async function runTool(name, args) {
   switch (name) {
@@ -142,6 +146,16 @@ export async function runTool(name, args) {
       return listTokenWhitepapers()
     case 'analyze_asset':
       return analyzeAsset(args)
+    case 'db_list_tables':
+      return dbListTables(args)
+    case 'db_describe_table':
+      return dbDescribeTable(args)
+    case 'db_execute':
+      return dbExecute(args)
+    case 'install_package':
+      return installPackage(args)
+    case 'list_installable_packages':
+      return listInstallablePackages()
     default:
       return { error: `Unknown tool: ${name}` }
   }

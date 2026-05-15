@@ -724,4 +724,66 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'db_list_tables',
+      description: 'Daftar semua tabel di SQLite dengan flag apakah tergolong tabel inti (tidak boleh di-DROP).',
+      parameters: { type: 'object', properties: { pin: { type: 'string' } }, required: ['pin'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'db_describe_table',
+      description: 'Ambil skema kolom + index + 3 sample row dari satu tabel SQLite.',
+      parameters: {
+        type: 'object',
+        properties: { pin: { type: 'string' }, table: { type: 'string' } },
+        required: ['pin', 'table'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'db_execute',
+      description:
+        'Eksekusi SQL pada SQLite. Allowed: SELECT/PRAGMA/EXPLAIN, CREATE TABLE, CREATE INDEX, ALTER TABLE, DROP, DELETE (with WHERE), UPDATE (with WHERE). DROP/DELETE butuh confirm=true dan tidak boleh menyentuh core table.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          sql: { type: 'string', description: 'SQL statement (tanpa multiple statements terpisah ;)' },
+          confirm: { type: 'boolean', description: 'Wajib true untuk DROP/DELETE' },
+        },
+        required: ['pin', 'sql'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'install_package',
+      description:
+        'Install paket npm dari allowlist di server runtime. Restart server diperlukan agar module di-load. Allowlist: sharp, pdfkit, qrcode, chartjs-node-canvas, @sparticuz/chromium, puppeteer-core, node-cron, csv-parser, cheerio, rss-parser, sanitize-html, date-fns, fast-xml-parser.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pin: { type: 'string' },
+          name: { type: 'string' },
+          save: { type: 'boolean' },
+        },
+        required: ['pin', 'name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_installable_packages',
+      description: 'Daftar package npm yang diizinkan untuk diinstall lewat agent.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
 ]

@@ -96,7 +96,18 @@ export default function Komoditas() {
       </div>
 
       <Bento padding="lg">
-        <p className="vn-eyebrow mb-3">Grafik {focused}</p>
+        <div className="flex flex-wrap items-baseline justify-between gap-3 mb-3">
+          <p className="vn-eyebrow">Grafik komoditas</p>
+          <select
+            value={focused}
+            onChange={e => setFocused(e.target.value)}
+            className="vn-input !w-auto !py-2 text-[13px]"
+          >
+            {COMMODITIES.map(c => (
+              <option key={c.id} value={c.id}>{c.name} ({c.id})</option>
+            ))}
+          </select>
+        </div>
         <h3 className="vn-headline text-[22px] mb-4">{COMMODITIES.find(c => c.id === focused)?.name}</h3>
         <TradingChart kind="saham" symbol={focused} range="3mo" height={240} />
         <p className="mt-4 text-[12px] text-[var(--vn-muted)] leading-relaxed">

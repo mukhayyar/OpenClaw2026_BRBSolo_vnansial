@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
 import KalkulatorPanel from './KalkulatorPanel'
+import LaporPenipuan from './LaporPenipuan'
 
 interface QuizQ {
   q: string
@@ -71,7 +72,7 @@ const TIPS = [
   { title: 'Hak konsumen', content: 'UU 21/2011 mewajibkan OJK melindungimu. Hubungi 157 jika hakmu dilanggar.' },
 ]
 
-type Tab = 'quiz' | 'tips' | 'kalkulator'
+type Tab = 'quiz' | 'tips' | 'kalkulator' | 'lapor'
 
 export default function Edukasi() {
   const [currentQ, setCurrentQ] = useState(0)
@@ -100,6 +101,7 @@ export default function Edukasi() {
     { id: 'quiz', label: 'Quiz', hint: 'Uji literasi keuanganmu' },
     { id: 'tips', label: 'Tips', hint: 'Panduan harian' },
     { id: 'kalkulator', label: 'Kalkulator', hint: 'Bunga jujur, anti predator' },
+    { id: 'lapor', label: 'Lapor Penipuan', hint: 'Cek rekening/nomor + panduan lapor' },
   ]
 
   return (
@@ -129,6 +131,7 @@ export default function Edukasi() {
       </div>
 
       {tab === 'kalkulator' && <KalkulatorPanel />}
+      {tab === 'lapor' && <LaporPenipuan embedded />}
 
       {tab === 'quiz' && (
         <div className="grid lg:grid-cols-5 gap-6">

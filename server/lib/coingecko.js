@@ -153,10 +153,28 @@ function ageInDays(genesisDate) {
   return Math.max(0, Math.floor((Date.now() - t) / 86_400_000))
 }
 
+const STABLECOIN_IDS = new Set([
+  'tether', 'usd-coin', 'dai', 'true-usd', 'frax', 'binance-usd', 'paxos-standard',
+  'first-digital-usd', 'usdd', 'usds', 'pyusd',
+])
+
 export function scoreCoinRisk(coin) {
   if (!coin || coin.error) return { score: null, error: coin?.error || 'no coin' }
   let score = 0
   const reasons = []
+  const id = (coin.id || '').toLowerCase()
+  const symbol = (coin.symbol || '').toLowerCase()
+  const isStable = STABLECOIN_IDS.has(id) || /^(usd|dai|busd|tusd|pyusd)/.test(symbol)
+
+  // Baseline: crypto is inherently volatile. Stablecoins get a much
+  // smaller base (still some, because of de-peg risk) than non-stables.
+  if (isStable) {
+    score += 5
+    reasons.push('Stablecoin — risiko utama: de-peg & risiko penerbit/audit cadangan.')
+  } else {
+    score += 20
+    reasons.push('Volatilitas inheren tinggi — koin crypto bisa ±20% per minggu. Bahkan blue-chip seperti BTC/ETH pernah drawdown 50–80%.')
+  }
 
   const days = ageInDays(coin.genesisDate)
   if (days < 90) {
@@ -165,40 +183,55 @@ export function scoreCoinRisk(coin) {
   } else if (days < 365) {
     score += 20
     reasons.push(`Cukup baru (${Math.round(days / 30)} bulan sejak genesis)`)
+  } else if (days < 1825 && !isStable) {
+    score += 5
+    reasons.push(`Belum 5 tahun (${Math.round(days / 365)} tahun) — track record terbatas.`)
   }
 
   const mc = coin.marketCap || 0
   if (mc < 1_000_000) {
     score += 25
-    reasons.push('Market cap di bawah $1 juta — likuiditas sangat rendah')
+    reasons.push('Market cap di bawah $1 juta — likuiditas sangat rendah, mudah dimanipulasi.')
   } else if (mc < 10_000_000) {
-    score += 12
-    reasons.push('Market cap di bawah $10 juta — likuiditas rendah')
+    score += 15
+    reasons.push('Market cap di bawah $10 juta — likuiditas rendah.')
+  } else if (mc < 100_000_000) {
+    score += 8
+    reasons.push('Market cap di bawah $100 juta — masih small-cap, volatilitas lebih besar dari blue-chip.')
   }
 
   const vol = coin.volume24h || 0
   if (vol < 50_000) {
     score += 15
-    reasons.push('Volume 24 jam sangat rendah — sulit jual saat butuh')
+    reasons.push('Volume 24 jam sangat rendah — sulit jual saat butuh.')
+  } else if (vol < 1_000_000 && !isStable) {
+    score += 5
+    reasons.push('Volume 24 jam terbatas — eksekusi besar bisa kena slippage.')
   }
 
   if (!coin.homepage?.length || !coin.homepage[0]) {
     score += 10
-    reasons.push('Tidak punya homepage publik')
+    reasons.push('Tidak punya homepage publik.')
   }
 
-  if (SCAM_LIST.has(coin.id) || SCAM_LIST.has(coin.symbol?.toLowerCase?.())) {
+  if (SCAM_LIST.has(id) || SCAM_LIST.has(symbol)) {
     score += 30
-    reasons.push('Tercantum di daftar koin yang pernah scam/rug-pull')
+    reasons.push('Tercantum di daftar koin yang pernah scam/rug-pull.')
   }
 
   if (Number.isFinite(coin.change30d)) {
     if (coin.change30d > 500) {
-      score += 12
-      reasons.push(`Pump 30 hari +${Math.round(coin.change30d)}% — waspada pump & dump`)
+      score += 15
+      reasons.push(`Pump 30 hari +${Math.round(coin.change30d)}% — waspada pump & dump.`)
+    } else if (coin.change30d > 100 && !isStable) {
+      score += 7
+      reasons.push(`Naik signifikan 30 hari (+${Math.round(coin.change30d)}%) — koreksi mungkin terjadi.`)
     } else if (coin.change30d < -90) {
-      score += 12
-      reasons.push(`Dump 30 hari ${Math.round(coin.change30d)}% — tanda token mati`)
+      score += 15
+      reasons.push(`Dump 30 hari ${Math.round(coin.change30d)}% — tanda token mati.`)
+    } else if (Math.abs(coin.change30d) > 30 && !isStable) {
+      score += 5
+      reasons.push(`Volatilitas 30 hari ±${Math.abs(Math.round(coin.change30d))}% — high beta.`)
     }
   }
 
@@ -212,7 +245,7 @@ export function scoreCoinRisk(coin) {
   return {
     score,
     level,
-    reasons: reasons.length ? reasons : ['Tidak ada red flag mayor yang terdeteksi.'],
+    reasons,
     disclaimer:
       'Skor risiko heuristik berdasarkan data publik — bukan audit smart contract. ' +
       'Crypto tetap berisiko tinggi. DYOR.',

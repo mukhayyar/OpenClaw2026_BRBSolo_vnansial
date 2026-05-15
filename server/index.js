@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 import { runAgentChat } from './agent/loop.js'
 import { testSumoPodPing, getModel } from './lib/openai.js'
 import { formatAgentError } from './lib/errors.js'
-import { getQuote, searchSymbols, getHistorical } from './lib/yahoo.js'
+import { getQuote, searchSymbols, getHistorical, getUsdIdr } from './lib/yahoo.js'
 import { scoreFinancialHealth } from './tools/health.js'
 import {
   getCompanyOverview,
@@ -110,6 +110,10 @@ app.get('/api/market/search', async (req, res) => {
 app.get('/api/market/history', async (req, res) => {
   const result = await getHistorical(req.query.symbol, req.query.range || '3mo')
   res.status(result.error && !result.points?.length ? 404 : 200).json(result)
+})
+
+app.get('/api/market/fx', async (_req, res) => {
+  res.json(await getUsdIdr())
 })
 
 // ----- IDX ------------------------------------------------------------------
