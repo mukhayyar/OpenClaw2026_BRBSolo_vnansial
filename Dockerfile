@@ -32,5 +32,6 @@ COPY --from=build /app/public ./public
 RUN mkdir -p /data && chown -R node:node /data
 USER node
 
-EXPOSE 3001
+EXPOSE 80
+ENV PORT=80
 CMD ["node", "server/index.js"]
