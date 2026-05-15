@@ -185,8 +185,8 @@ No ChatGPT consumer app in production path; development may use Cursor/Claude fo
 
 ## 17. Submission checklist
 
-- [ ] Repo name: `OpenClaw2026_BRBSolo_vnansial`  
-- [ ] GitHub link works; README has Quick Start  
+- [v] Repo name: `OpenClaw2026_BRBSolo_vnansial`  
+- [v] GitHub link works; README has Quick Start  
 - [ ] **Deadline: 15 Mei 2026, 23:00 WIB** — no commits after deadline (organizer rules)  
 - [ ] Devpost: description, built-with tags, thumbnail  
 - [ ] **Video** uploaded (≤ 3 min if limit allows; script targets 2 min)  
@@ -200,6 +200,12 @@ No ChatGPT consumer app in production path; development may use Cursor/Claude fo
 ## 18. Optional: Best Payment Use Case (Doku track)
 
 Vnansial can extend to **safe payment education**: the agent explains e-wallet and QRIS fraud patterns, simulates whether a payment link is suspicious, and guides users to verify merchant identity before paying—without processing live payments in the hackathon MVP. Future integration with **Doku** or bank APIs could power verified merchant lookup and escrow-style literacy flows for marketplace scams. *MVP focuses on prevention and reporting, not moving money.*
+
+---
+
+## License
+
+**Apache License 2.0** — Copyright © 2026 **BRBSolo**. Source code: [LICENSE](https://github.com/mukhayyar/OpenClaw2026_BRBSolo_vnansial/blob/main/LICENSE) in the repository.
 
 ---
 

@@ -2,6 +2,7 @@
   "name": "vnansial",
   "private": true,
   "version": "1.0.0",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -n web,api -c cyan,green \"npm run dev:web\" \"npm run dev:server\"",

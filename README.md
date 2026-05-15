@@ -1,10 +1,12 @@
 # Vnansial
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 **Multi-tool AI financial guardian for Indonesia** — literasi keuangan, cek investasi bodong, kalkulator pinjaman, dan asisten AI dengan **tool calling** (SumoPod).
 
 > *Jangan sampai uangmu hilang karena kurang informasi.*
 
-**OpenClaw Agenthon 2026** · Team: **BRB Solo** · Repo: [`OpenClaw2026_BRBSolo_vnansial`](https://github.com/mukhayyar/OpenClaw2026_BRBSolo_vnansial)
+**OpenClaw Agenthon 2026** · Team: **BRBSolo** · Repo: [`OpenClaw2026_BRBSolo_vnansial`](https://github.com/mukhayyar/OpenClaw2026_BRBSolo_vnansial)
 
 ---
 
@@ -352,4 +354,8 @@ Vnansial is **educational software**, not licensed financial, legal, or investme
 
 ## License
 
-MIT (or specify your license). © 2026 `[Your Team Name]`.
+Copyright © 2026 **BRBSolo**
+
+This project is licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for the full text.
+
+You may use, modify, and distribute this software in accordance with the License. This software is provided **without warranty**; see the License for limitations on liability.
