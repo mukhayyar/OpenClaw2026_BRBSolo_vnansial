@@ -1,0 +1,16 @@
+# Repliz optional integration
+Priority: P2
+Status: cancelled
+Est. time: 0m
+Last updated: 2026-05-15
+
+## Goal
+~~Schedule financial literacy posts to social accounts via Repliz Gold API.~~
+
+## Status
+**Removed per product decision (2026-05-15).** All Repliz code, tools, env vars, and docs deleted. Generic social literacy messaging may remain in copy without third-party scheduling APIs.
+
+## Files removed
+- `server/lib/repliz.js`
+- `server/tools/repliz.js`
+- `repliz_*` tool definitions and runner cases

@@ -4,9 +4,9 @@ import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { runAgentChat } from './agent/loop.js'
-import { isReplizConfigured } from './lib/repliz.js'
 import { testSumoPodPing, getModel } from './lib/openai.js'
 import { formatAgentError } from './lib/errors.js'
+import { getQuote, searchSymbols, getHistorical } from './lib/yahoo.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT) || 3001
@@ -22,13 +22,31 @@ app.get('/api/health', (_req, res) => {
     service: 'vnansial-api',
     sumopod: Boolean(process.env.SUMOPOD_API_KEY),
     model: getModel(),
-    repliz: isReplizConfigured(),
   })
 })
 
 app.get('/api/agent/test', async (_req, res) => {
   const result = await testSumoPodPing()
   res.status(result.ok ? 200 : 503).json(result)
+})
+
+app.get('/api/market/quote', async (req, res) => {
+  const symbol = req.query.symbol
+  const result = await getQuote(symbol)
+  res.status(result.error ? 404 : 200).json(result)
+})
+
+app.get('/api/market/search', async (req, res) => {
+  const q = req.query.q || req.query.query
+  const result = await searchSymbols(q)
+  res.json(result)
+})
+
+app.get('/api/market/history', async (req, res) => {
+  const symbol = req.query.symbol
+  const range = req.query.range || '3mo'
+  const result = await getHistorical(symbol, range)
+  res.status(result.error && !result.points?.length ? 404 : 200).json(result)
 })
 
 app.post('/api/agent/chat', async (req, res) => {
@@ -67,6 +85,5 @@ if (isMain) {
     console.log(`Vnansial API http://localhost:${PORT}`)
     console.log(`  Model:   ${getModel()}`)
     console.log(`  SumoPod: ${process.env.SUMOPOD_API_KEY ? 'configured' : 'MISSING'}`)
-    console.log(`  Repliz:  ${isReplizConfigured() ? 'configured' : 'optional'}`)
   })
 }

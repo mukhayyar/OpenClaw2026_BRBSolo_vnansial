@@ -9,6 +9,7 @@ import KalkulatorPinjaman from './pages/KalkulatorPinjaman'
 import Edukasi from './pages/Edukasi'
 import LaporPenipuan from './pages/LaporPenipuan'
 import AsistenAI from './pages/AsistenAI'
+import RencanaInvestasi from './pages/RencanaInvestasi'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/edukasi" element={<Edukasi />} />
           <Route path="/lapor" element={<LaporPenipuan />} />
           <Route path="/asisten" element={<AsistenAI />} />
+          <Route path="/rencana-investasi" element={<RencanaInvestasi />} />
         </Route>
       </Routes>
     </BrowserRouter>

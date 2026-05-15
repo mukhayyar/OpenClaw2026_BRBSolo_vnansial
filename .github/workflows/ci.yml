@@ -12,6 +12,7 @@ jobs:
     env:
       SUMOPOD_API_KEY: ''
       SUMOPOD_MODEL: qwen3.6-flash
+      YAHOO_MOCK: '1'
       NODE_ENV: test
 
     steps:

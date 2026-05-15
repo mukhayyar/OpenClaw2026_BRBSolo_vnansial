@@ -1,0 +1,29 @@
+plan_file: repliz-optional.plan
+status: removed
+percent_estimate: 0
+last_action: Deleted Repliz lib/tools; stripped docs, UI, env example
+blocker: none
+timestamp: 2026-05-15T17:00:00+07:00
+
+completed_tasks:
+- Removed server/lib/repliz.js and server/tools/repliz.js
+- Removed repliz_* agent tools
+- Updated README, devpost, presentation, frontend copy
+- Marked repliz-optional.plan as cancelled
+
+remaining_tasks:
+- none
+
+files_changed:
+- server/lib/repliz.js (deleted)
+- server/tools/repliz.js (deleted)
+- server/tools/definitions.js
+- server/tools/runner.js
+- server/index.js
+- server/agent/systemPrompt.js
+- .env.example
+- README.md, devpost.md, presentation.md
+- src/pages/AsistenAI.tsx, Landing.tsx
+- src/components/AgentTicker.tsx
+
+next_command: npm test && npm run build

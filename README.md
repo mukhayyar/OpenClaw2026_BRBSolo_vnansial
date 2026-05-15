@@ -18,7 +18,7 @@
 | Pinjol predator & bunga tersembunyi | **Kalkulator Pinjaman** + tool `calculate_loan` |
 | Korban penipuan tidak tahu lapor ke mana | **Lapor Penipuan** + tool `get_fraud_report_guide` |
 | Literasi keuangan rendah | **Edukasi** (quiz & tips) |
-| Butuh jawaban cepat & aksi (sosmed) | **Asisten AI** dengan loop tool calling + Repliz (opsional) |
+| Butuh jawaban cepat & panduan | **Asisten AI** dengan loop tool calling (SumoPod) |
 
 **Visi produk (roadmap):** money psychology, judi online prevention, dataset Waspada Investasi (SQLite), multi-agent orchestrator. Lihat [Roadmap](#roadmap--openclaw-agenthon) di bawah.
 
@@ -32,7 +32,7 @@
 | **Autonomous loop** | ✅ Partial | Same file: up to **8** LLM↔tool rounds **without** user input between tool calls in one chat request |
 | **Multi-agent system** | ⏳ Planned | Today: **single** agent with all tools; orchestrator/specialists not yet in repo |
 | **Public deployable** | ✅ Documented | [Quick start](#quick-start), [Docker](#docker), [Public deployment](#public-deployment) |
-| **Not a basic chatbot** | ✅ | Agent invokes calculators, OJK demo lookup, fraud guide, Repliz APIs dynamically |
+| **Not a basic chatbot** | ✅ | Agent invokes calculators, OJK demo lookup, fraud guide, market/planner tools dynamically |
 
 ### How autonomy works today
 
@@ -88,24 +88,24 @@ flowchart TB
 
   subgraph Tools["server/tools"]
     V[vnansial.js]
-    R[repliz.js]
+    M[market.js / planner.js]
   end
 
   subgraph External["External APIs"]
     S[SumoPod OpenAI-compatible]
-    RZ[Repliz public API]
+    Y[Yahoo Finance]
   end
 
   A --> CH
   CH --> Agent
   TR --> V
-  TR --> R
+  TR --> M
   Agent --> S
-  R --> RZ
+  M --> Y
   C --> DemoMap[server/data/ojk.js — 8 entitas demo]
 ```
 
-**Planned (not in repo yet):** Orchestrator + Investigator / Analyst / Guardian / Outreach agents, `POST /api/agent/run`, UI `/agen`, SQLite Waspada CSV (~11k rows).
+**Planned (not in repo yet):** Orchestrator + Investigator / Analyst / Guardian / Coach agents, `POST /api/agent/run`, UI `/agen`, SQLite Waspada CSV (~11k rows).
 
 ---
 
@@ -130,7 +130,7 @@ flowchart TB
 | Build | Vite 8, TypeScript |
 | API | Express 5, CORS, ESM (`"type": "module"`) |
 | AI | `openai` SDK → **SumoPod** (`SUMOPOD_BASE_URL`, `gpt-4o-mini`) |
-| Social (optional) | **Repliz** REST `https://api.repliz.com/public` — HTTP Basic |
+| Market data | **Yahoo Finance** via `yahoo-finance2` (mock in CI) |
 | Deploy | Docker (Node serves `dist/` + API on one port) |
 
 ---
@@ -171,11 +171,9 @@ npm start
 | `SUMOPOD_API_KEY` | **Yes** (for AI) | API key from SumoPod |
 | `SUMOPOD_BASE_URL` | No | Default `https://ai.sumopod.com/v1` |
 | `SUMOPOD_MODEL` | No | Default `gpt-4o-mini` |
-| `REPLIZ_USERNAME` | No | Repliz API Basic auth user |
-| `REPLIZ_PASSWORD` | No | Repliz API Basic auth password |
-| `REPLIZ_API_URL` | No | Default `https://api.repliz.com/public` |
+| `YAHOO_MOCK` | No | Set `1` for offline/CI mock market quotes |
 | `PORT` | No | Default `3001` |
-| `VNANSIAL_PUBLIC_URL` | No | Used in Repliz schedule metadata |
+| `VNANSIAL_PUBLIC_URL` | No | Public site URL for metadata/links |
 | `VITE_API_URL` | No | Leave empty in dev (Vite proxies `/api` → 3001) |
 
 **Never commit `.env`.** See `.env.example`.
@@ -191,7 +189,7 @@ npm start
   "ok": true,
   "service": "vnansial-api",
   "sumopod": true,
-  "repliz": false
+  "model": "qwen3.6-flash"
 }
 ```
 
@@ -240,8 +238,8 @@ Use these as **single user messages** in the chat UI or as the last message in `
 2. **Loan + risk:**  
    `Hitung cicilan pinjaman Rp 10.000.000 bunga 36% per tahun tenor 12 bulan metode anuitas, lalu jelaskan apakah ini predator.`
 
-3. **Repliz (needs `REPLIZ_*` in .env):**  
-   `Daftar akun Repliz saya dan buat draft caption edukasi waspada investasi bodong — jangan jadwalkan dulu tanpa konfirmasi saya.`
+3. **Investment plan:**  
+   `Simulasikan target tabungan Rp 50 juta dalam 24 bulan dengan iuran Rp 1,5 juta/bulan dan return 8% per tahun, lalu sarankan alokasi balanced.`
 
 **curl example:**
 
@@ -261,21 +259,6 @@ curl -s http://localhost:3001/api/agent/chat \
 - Planned: import [OJK Waspada Investasi Alert Portal](https://www.ojk.go.id) CSV → `public/data/waspada.sqlite` via build script + `GET /api/investasi/search`.
 
 Until then, advise users to verify at [sikapiuangmu.ojk.go.id](https://sikapiuangmu.ojk.go.id).
-
----
-
-## Repliz integration (optional)
-
-When `REPLIZ_USERNAME` and `REPLIZ_PASSWORD` are set:
-
-| Tool | Purpose |
-|------|---------|
-| `repliz_list_accounts` | List connected social accounts |
-| `repliz_list_schedules` | List scheduled posts |
-| `repliz_schedule_literacy_post` | Schedule financial literacy text post |
-
-**Code:** `server/lib/repliz.js`, `server/tools/repliz.js`  
-**Policy:** Agent prompt requires explicit user consent before scheduling.
 
 ---
 
@@ -320,7 +303,7 @@ Connect repo → set start command `npm start` → add environment variables fro
 2. **0:20–0:50** — Cek Investasi: search `Binomo` → ilegal; red-flag checklist  
 3. **0:50–1:20** — Asisten AI: one compound prompt → show **tool calls** in UI expander  
 4. **1:20–1:40** — Kalkulator or Edukasi quiz (quick)  
-5. **1:40–2:00** — `GET /api/health`, mention Repliz + roadmap multi-agent  
+5. **1:40–2:00** — `GET /api/health`, `/rencana-investasi`, roadmap multi-agent  
 
 ---
 
@@ -344,7 +327,7 @@ Details: `AGENT.md`, `presentation.md`.
 | Demo URL | _(add after deploy)_ |
 
 **Devpost one-liner:**  
-*Vnansial is a free Indonesian financial guardian: interactive fraud tools plus an AI agent that autonomously chains SumoPod tool calls to investigate scams, calculate predatory loans, and optionally schedule literacy posts via Repliz.*
+*Vnansial is a free Indonesian financial guardian: interactive fraud tools plus an AI agent that autonomously chains SumoPod tool calls to investigate scams, calculate predatory loans, and plan educational savings goals.*
 
 ---
 

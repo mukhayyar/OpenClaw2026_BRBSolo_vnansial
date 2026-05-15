@@ -25,7 +25,7 @@ Judges score **Autonomy 30%**, **Creativity 30%**, **Technical 20%**. P0 items d
 | `waspada-sqlite.plan` | P1 | not_started | OJK CSV → SQLite search |
 | `discover-challenges.plan` | P1 | not_started | Challenges + Coach agent |
 | `ui-futuristic-web3.plan` | P1 | done | Glass / Web3 UI |
-| `repliz-optional.plan` | P2 | partial | Social scheduling API |
+| `repliz-optional.plan` | P2 | cancelled | Removed — no Repliz integration |
 | `testing-ci.plan` | P1 | partial | Vitest + GitHub Actions |
 | `judge-docs.plan` | P0 | partial | README, AGENT.md, deck |
 | `openclaw-submission.plan` | P0 | partial | Repo naming + history reset |
@@ -34,7 +34,7 @@ Judges score **Autonomy 30%**, **Creativity 30%**, **Technical 20%**. P0 items d
 ## Repo snapshot (2026-05-15)
 - **Remote:** `git@github.com:mukhayyar/OpenClaw2026_BRBSolo_vnansial.git`
 - **History:** 1 root commit (`e983a4c`) — pre-sprint commits removed
-- **Shipped:** React app (6 pages), Express API, tool-calling loop, `/api/agent/test`, glass UI, Repliz tools, Vitest tests + `ci.yml` (add `npm test` script!)
+- **Shipped:** React app (7+ routes), Express API, tool-calling loop, `/api/agent/test`, glass UI, Yahoo/market tools, Vitest tests + `ci.yml`
 - **Missing P0:** `/api/agent/run`, `/agen`, multi-agent orchestrator, live deploy URL, demo video, AGENT.md
 
 ## Commands / URLs

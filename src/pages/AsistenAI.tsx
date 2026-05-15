@@ -19,7 +19,7 @@ const SUGGESTIONS = [
 const INITIAL: ChatMessage = {
   role: 'assistant',
   content:
-    'Halo! Saya Asisten Vnansial — agen AI dengan tool calling. Tanya investasi, pinjaman, penipuan, atau Repliz.',
+    'Halo! Saya Asisten Vnansial — agen AI dengan tool calling. Tanya investasi, pinjaman, penipuan, atau rencana tabungan.',
 }
 
 export default function AsistenAI() {
@@ -76,7 +76,7 @@ export default function AsistenAI() {
           <span className="badge-onchain">Multi-Tool Agent</span>
         </div>
         <p className="text-slate-400 text-sm">
-          Powered by SumoPod · Autonomous tool loop · Repliz (opsional)
+          Powered by SumoPod · Autonomous tool loop
         </p>
         {apiOk === false && (
           <p className="mt-2 text-amber-400 text-sm">

@@ -1,0 +1,40 @@
+# Investment Planning + Yahoo Finance
+Priority: P1
+Status: done
+Est. time: 120m
+Last updated: 2026-05-15
+
+## Goal
+Comprehensive investment planning page with live Yahoo Finance quotes, paper portfolio, and AI planner tools.
+
+## Why it matters for judges (scoring rubric tie-in)
+- **Technical 20%:** Real external API integration, caching, mocked CI
+- **Creativity 30%:** Paper portfolio + goal planner in Indonesian context
+- **Autonomy 30%:** Agent can quote markets and run goal simulations via tools
+
+## Acceptance criteria
+- [x] `yahoo-finance2` server lib + 60s cache
+- [x] `GET /api/market/quote`, `/search`, `/history`
+- [x] Page `/rencana-investasi`
+- [x] AI tools: get_market_quote, search_market_symbols, calculate_investment_goal, suggest_asset_allocation
+- [x] Vitest with YAHOO_MOCK=1
+- [x] Prominent disclaimer
+
+## Files touched / to create
+- `server/lib/yahoo.js`, `server/tools/planner.js`, `server/tools/market.js`
+- `server/index.js`, `server/tools/definitions.js`, `server/tools/runner.js`
+- `src/pages/RencanaInvestasi.tsx`
+- `tests/server/yahoo.test.js`, `tests/server/planner.test.js`
+
+## How to verify
+```bash
+npm run dev
+open http://localhost:5173/rencana-investasi
+curl 'http://localhost:3001/api/market/quote?symbol=BBCA.JK'
+curl 'http://localhost:3001/api/market/search?q=bank'
+```
+
+## Handoff prompt (copy-paste block for next AI)
+```
+Add historical chart polish on /rencana-investasi, wire multi-agent Planner specialist to market tools only. Do NOT read .env.
+```

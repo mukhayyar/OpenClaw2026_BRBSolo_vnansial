@@ -22,7 +22,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.6.0",
-    "framer-motion": "^12.38.0"
+    "framer-motion": "^12.38.0",
+    "yahoo-finance2": "^2.13.3"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

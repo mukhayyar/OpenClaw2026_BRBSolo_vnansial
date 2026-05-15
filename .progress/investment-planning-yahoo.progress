@@ -1,0 +1,24 @@
+plan_file: investment-planning-yahoo.plan
+status: done
+percent_estimate: 100
+last_action: Implemented Yahoo API, page, agent tools, tests
+blocker: none
+timestamp: 2026-05-15T16:35:00+07:00
+
+completed_tasks:
+- server/lib/yahoo.js with cache + YAHOO_MOCK
+- Market API routes
+- RencanaInvestasi page
+- 4 new agent tools
+- Unit tests passing in CI mock mode
+
+remaining_tasks:
+- Optional: recharts upgrade for richer charts
+
+files_changed:
+- server/lib/yahoo.js
+- server/tools/planner.js
+- server/tools/market.js
+- src/pages/RencanaInvestasi.tsx
+
+next_command: npm run dev && open /rencana-investasi

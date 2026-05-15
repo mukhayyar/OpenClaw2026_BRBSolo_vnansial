@@ -60,51 +60,67 @@ export const TOOL_DEFINITIONS = [
   {
     type: 'function',
     function: {
-      name: 'repliz_list_accounts',
-      description:
-        'Daftar akun media sosial terhubung di Repliz (Instagram, TikTok, Facebook, dll). Butuh kredensial Repliz.',
+      name: 'get_market_quote',
+      description: 'Ambil harga pasar real-time (delayed) dari Yahoo Finance untuk simbol saham/ETF/indeks.',
       parameters: {
         type: 'object',
         properties: {
-          page: { type: 'integer' },
-          limit: { type: 'integer' },
-          type: { type: 'string', description: 'Filter tipe platform jika didukung API' },
+          symbol: {
+            type: 'string',
+            description: 'Ticker, misal AAPL, BBCA.JK, ^JKSE',
+          },
         },
+        required: ['symbol'],
       },
     },
   },
   {
     type: 'function',
     function: {
-      name: 'repliz_list_schedules',
-      description: 'Lihat jadwal posting yang sudah diatur di Repliz.',
+      name: 'search_market_symbols',
+      description: 'Cari simbol Yahoo Finance berdasarkan nama perusahaan atau ticker.',
       parameters: {
         type: 'object',
         properties: {
-          page: { type: 'integer' },
-          limit: { type: 'integer' },
-          status: { type: 'string' },
+          query: { type: 'string' },
         },
+        required: ['query'],
       },
     },
   },
   {
     type: 'function',
     function: {
-      name: 'repliz_schedule_literacy_post',
+      name: 'calculate_investment_goal',
       description:
-        'Jadwalkan posting edukasi literasi keuangan ke akun sosial via Repliz. Gunakan setelah user setuju dan accountId diketahui.',
+        'Simulasi edukasi: target tabungan/investasi, bulan, iuran bulanan, return tahunan asumsi.',
       parameters: {
         type: 'object',
         properties: {
-          accountId: { type: 'string', description: 'ID akun Repliz dari repliz_list_accounts' },
-          title: { type: 'string' },
-          caption: { type: 'string', description: 'Caption/teks posting' },
-          topic: { type: 'string' },
-          scheduleAt: { type: 'string', description: 'ISO 8601 datetime, default +1 jam' },
-          linkUrl: { type: 'string', description: 'URL link preview jika perlu' },
+          targetAmount: { type: 'number' },
+          months: { type: 'number' },
+          monthlyContribution: { type: 'number' },
+          expectedAnnualReturnPercent: { type: 'number' },
+          currentSavings: { type: 'number' },
         },
-        required: ['accountId', 'title', 'caption'],
+        required: ['targetAmount', 'months'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'suggest_asset_allocation',
+      description: 'Saran alokasi aset edukasi: conservative, balanced, aggressive.',
+      parameters: {
+        type: 'object',
+        properties: {
+          riskProfile: {
+            type: 'string',
+            enum: ['conservative', 'balanced', 'aggressive'],
+          },
+        },
+        required: ['riskProfile'],
       },
     },
   },

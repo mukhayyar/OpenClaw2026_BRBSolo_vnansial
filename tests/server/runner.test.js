@@ -26,4 +26,19 @@ describe('runTool', () => {
     const r = await runTool('nonexistent_tool', {})
     expect(r.error).toMatch(/Unknown tool/)
   })
+
+  it('runs get_market_quote (mock)', async () => {
+    const r = await runTool('get_market_quote', { symbol: 'AAPL' })
+    expect(r.regularMarketPrice).toBeDefined()
+  })
+
+  it('runs calculate_investment_goal', async () => {
+    const r = await runTool('calculate_investment_goal', {
+      targetAmount: 10_000_000,
+      months: 12,
+      monthlyContribution: 500_000,
+    })
+    expect(r.projectedEndBalance).toBeGreaterThan(0)
+    expect(r.onTrack).toBeDefined()
+  })
 })

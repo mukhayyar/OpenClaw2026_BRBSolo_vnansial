@@ -5,10 +5,11 @@ import {
   getFraudReportGuide,
 } from './vnansial.js'
 import {
-  replizListAccounts,
-  replizListSchedules,
-  replizScheduleLiteracyPost,
-} from './repliz.js'
+  getMarketQuote,
+  searchMarketSymbols,
+  calculateInvestmentGoal,
+  suggestAssetAllocation,
+} from './market.js'
 
 export async function runTool(name, args) {
   switch (name) {
@@ -20,12 +21,14 @@ export async function runTool(name, args) {
       return assessInvestmentRedFlags(args)
     case 'get_fraud_report_guide':
       return getFraudReportGuide()
-    case 'repliz_list_accounts':
-      return replizListAccounts(args)
-    case 'repliz_list_schedules':
-      return replizListSchedules(args)
-    case 'repliz_schedule_literacy_post':
-      return replizScheduleLiteracyPost(args)
+    case 'get_market_quote':
+      return getMarketQuote(args)
+    case 'search_market_symbols':
+      return searchMarketSymbols(args)
+    case 'calculate_investment_goal':
+      return calculateInvestmentGoal(args)
+    case 'suggest_asset_allocation':
+      return suggestAssetAllocation(args)
     default:
       return { error: `Unknown tool: ${name}` }
   }

@@ -6,6 +6,7 @@ export default defineConfig({
     include: ['tests/**/*.test.{js,ts}'],
     env: {
       SUMOPOD_API_KEY: '',
+      YAHOO_MOCK: '1',
       NODE_ENV: 'test',
     },
   },

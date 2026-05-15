@@ -2,7 +2,7 @@ const ITEMS = [
   'Powered by AI Agents',
   'SumoPod · Tool Calling Active',
   'OJK Demo Lookup',
-  'Repliz Social Outreach',
+  'Waspada Investasi Lookup',
   'Autonomous Loop Ready',
   'Financial Guardian Protocol',
 ]

@@ -21,7 +21,7 @@ export default function PageShell({ title, subtitle, icon, children }: Props) {
         {subtitle && <p className="text-slate-400 mb-8">{subtitle}</p>}
         {children}
       </motion.div>
-    </motion.div>
+    </div>
   )
 }
 

@@ -5,7 +5,7 @@ const features = [
   {
     icon: '🤖',
     title: 'Asisten AI',
-    desc: 'Chat dengan AI yang bisa cek investasi, hitung pinjaman, dan jadwalkan konten edukasi via Repliz.',
+    desc: 'Chat dengan AI yang bisa cek investasi, hitung pinjaman, dan bantu rencanakan tabungan.',
     path: '/asisten',
     color: 'from-violet-500/20 to-violet-500/5',
     border: 'border-violet-500/30',

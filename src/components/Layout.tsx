@@ -7,6 +7,7 @@ import FloatingChat from './FloatingChat'
 
 const navItems = [
   { path: '/asisten', label: 'Asisten AI', icon: '🤖' },
+  { path: '/rencana-investasi', label: 'Rencana Investasi', icon: '📈' },
   { path: '/cek-investasi', label: 'Cek Investasi', icon: '🔍' },
   { path: '/kalkulator', label: 'Kalkulator', icon: '🧮' },
   { path: '/edukasi', label: 'Edukasi', icon: '📚' },
