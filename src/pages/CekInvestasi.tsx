@@ -1,18 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import PageShell from '../components/PageShell'
 import Bento from '../components/Bento'
-
-const OJK_LICENSED = new Map([
-  ['pt manulife aset manajemen indonesia', { name: 'PT Manulife Aset Manajemen Indonesia', license: 'KEP-07/PM/MI/1996', type: 'Manajer Investasi', status: 'TERDAFTAR' }],
-  ['pt mandiri manajemen investasi', { name: 'PT Mandiri Manajemen Investasi', license: 'KEP-11/PM/MI/2004', type: 'Manajer Investasi', status: 'TERDAFTAR' }],
-  ['pt bank central asia tbk', { name: 'PT Bank Central Asia Tbk', license: 'No.275/KMK.013/1991', type: 'Perbankan', status: 'TERDAFTAR' }],
-  ['pt bank rakyat indonesia tbk', { name: 'PT Bank Rakyat Indonesia (Persero) Tbk', license: 'No.S-48/MK.17/1992', type: 'Perbankan', status: 'TERDAFTAR' }],
-  ['binomo', { name: 'Binomo', license: '-', type: 'Binary Options', status: 'ILEGAL' }],
-  ['quotex', { name: 'Quotex', license: '-', type: 'Binary Options', status: 'ILEGAL' }],
-  ['danamaster', { name: 'DanaMaster', license: '-', type: 'Robot Trading', status: 'ILEGAL' }],
-  ['robot trading forex', { name: 'Robot Trading Forex (Umum)', license: '-', type: 'Robot Trading', status: 'ILEGAL' }],
-])
 
 const RED_FLAGS = [
   'Menjanjikan return pasti >2%/bulan',
@@ -25,19 +14,50 @@ const RED_FLAGS = [
   'Kantor tidak jelas / hanya online',
 ]
 
+interface OJKResult {
+  name: string
+  entityType: string
+  activityType: string
+  dateAdded: string
+  notes: string
+  website: string
+  status: string
+  license?: string
+  type?: string
+}
+
 export default function CekInvestasi() {
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<null | {
     found: boolean
-    data?: { name: string; license: string; type: string; status: string }
+    data?: OJKResult
+    matches?: OJKResult[]
   }>(null)
+  const [loading, setLoading] = useState(false)
+  const [dbSize, setDbSize] = useState(0)
   const [checkedFlags, setCheckedFlags] = useState<boolean[]>(new Array(RED_FLAGS.length).fill(false))
 
-  function handleSearch() {
-    const q = query.trim().toLowerCase()
+  useEffect(() => {
+    fetch('/api/ojk/stats').then(r => r.json()).then(d => setDbSize(d.total)).catch(() => {})
+  }, [])
+
+  async function handleSearch() {
+    const q = query.trim()
     if (!q) return
-    const match = OJK_LICENSED.get(q)
-    setResult(match ? { found: true, data: match } : { found: false })
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/ojk/search?q=${encodeURIComponent(q)}&limit=10`)
+      const data = await res.json()
+      if (data.results?.length > 0) {
+        setResult({ found: true, data: data.results[0], matches: data.results })
+      } else {
+        setResult({ found: false })
+      }
+    } catch {
+      setResult({ found: false })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const flagCount = checkedFlags.filter(Boolean).length
@@ -47,7 +67,7 @@ export default function CekInvestasi() {
     <PageShell
       eyebrow="Verifikasi"
       title="Cek izin OJK sebelum kamu transfer."
-      subtitle="Database demo terkurasi dari Satgas Waspada Investasi. Untuk verifikasi resmi, kunjungi sikapiuangmu.ojk.go.id."
+      subtitle={`Database ${dbSize ? dbSize.toLocaleString('id-ID') + '+ entitas ilegal' : ''} dari OJK Satgas Waspada Investasi. Untuk verifikasi resmi, kunjungi sikapiuangmu.ojk.go.id.`}
     >
       {/* Search */}
       <Bento className="mb-6" padding="lg">
@@ -61,8 +81,8 @@ export default function CekInvestasi() {
             placeholder="Contoh: Binomo, PT Manulife…"
             className="vn-input"
           />
-          <button onClick={handleSearch} className="vn-btn vn-btn-primary">
-            Cek sekarang
+          <button onClick={handleSearch} disabled={loading} className="vn-btn vn-btn-primary">
+            {loading ? 'Mencari…' : 'Cek sekarang'}
           </button>
         </div>
         <p className="mt-3 text-[12px] text-[var(--vn-muted)]">
@@ -75,51 +95,83 @@ export default function CekInvestasi() {
       {result && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
           {result.found && result.data ? (
-            <div
-              className={`bento bento-pad-lg ${
-                result.data.status === 'TERDAFTAR' ? 'bento-mint' : ''
-              }`}
-              style={result.data.status === 'ILEGAL'
-                ? { background: 'var(--vn-red-soft)', borderColor: 'rgba(185, 28, 28, 0.18)' }
-                : undefined}
-            >
-              <div className="flex items-start gap-4 flex-wrap">
-                <div className="flex-1 min-w-[240px]">
-                  <span className={
-                    result.data.status === 'TERDAFTAR'
-                      ? 'vn-chip'
-                      : 'vn-chip vn-chip-red'
-                  }>
-                    {result.data.status === 'TERDAFTAR' ? '✓ Terdaftar OJK' : '✕ Ilegal'}
-                  </span>
-                  <h3 className="vn-headline text-[26px] sm:text-[32px] mt-3 mb-2">{result.data.name}</h3>
-                  <dl className="grid grid-cols-2 gap-3 text-[14px]">
-                    <div>
-                      <dt className="text-[var(--vn-muted)] text-[12px]">Tipe</dt>
-                      <dd className="font-medium">{result.data.type}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[var(--vn-muted)] text-[12px]">Lisensi</dt>
-                      <dd className="font-medium">{result.data.license}</dd>
-                    </div>
-                  </dl>
-                  {result.data.status === 'ILEGAL' && (
-                    <p className="mt-4 text-[14px] text-[var(--vn-red)] font-medium">
-                      Peringatan: entitas ini tidak memiliki izin. Lapor ke OJK 157 atau{' '}
-                      <a href="https://konsumen.ojk.go.id" className="underline">konsumen.ojk.go.id</a>.
-                    </p>
-                  )}
+            <div className="space-y-3">
+              <div
+                className={`bento bento-pad-lg ${
+                  result.data.status === 'TERDAFTAR' ? 'bento-mint' : ''
+                }`}
+                style={result.data.status === 'ILEGAL'
+                  ? { background: 'var(--vn-red-soft)', borderColor: 'rgba(185, 28, 28, 0.18)' }
+                  : undefined}
+              >
+                <div className="flex items-start gap-4 flex-wrap">
+                  <div className="flex-1 min-w-[240px]">
+                    <span className={
+                      result.data.status === 'TERDAFTAR'
+                        ? 'vn-chip'
+                        : 'vn-chip vn-chip-red'
+                    }>
+                      {result.data.status === 'TERDAFTAR' ? '✓ Terdaftar OJK' : '✕ Ilegal'}
+                    </span>
+                    <h3 className="vn-headline text-[26px] sm:text-[32px] mt-3 mb-2">{result.data.name}</h3>
+                    <dl className="grid grid-cols-2 gap-3 text-[14px]">
+                      <div>
+                        <dt className="text-[var(--vn-muted)] text-[12px]">Jenis Entitas</dt>
+                        <dd className="font-medium">{result.data.entityType || result.data.type || '-'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--vn-muted)] text-[12px]">Jenis Kegiatan</dt>
+                        <dd className="font-medium">{result.data.activityType || result.data.license || '-'}</dd>
+                      </div>
+                      {result.data.dateAdded && (
+                        <div>
+                          <dt className="text-[var(--vn-muted)] text-[12px]">Tanggal Diblokir</dt>
+                          <dd className="font-medium">{result.data.dateAdded}</dd>
+                        </div>
+                      )}
+                      {result.data.notes && (
+                        <div>
+                          <dt className="text-[var(--vn-muted)] text-[12px]">Keterangan</dt>
+                          <dd className="font-medium">{result.data.notes}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    {result.data.status === 'ILEGAL' && (
+                      <p className="mt-4 text-[14px] text-[var(--vn-red)] font-medium">
+                        Peringatan: entitas ini terdaftar ILEGAL oleh OJK. Lapor ke OJK 157 atau{' '}
+                        <a href="https://konsumen.ojk.go.id" className="underline">konsumen.ojk.go.id</a>.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Additional matches */}
+              {result.matches && result.matches.length > 1 && (
+                <div className="bento bento-pad-lg">
+                  <p className="vn-eyebrow mb-3">{result.matches.length - 1} hasil lainnya</p>
+                  <div className="space-y-2">
+                    {result.matches.slice(1, 6).map((m, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[var(--vn-bg-deep)]">
+                        <div>
+                          <div className="text-[14px] font-medium">{m.name}</div>
+                          <div className="text-[12px] text-[var(--vn-muted)]">{m.entityType} — {m.activityType}</div>
+                        </div>
+                        <span className="vn-chip vn-chip-red text-[11px]">Ilegal</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bento bento-pad-lg" style={{ background: 'var(--vn-amber-soft)', borderColor: 'rgba(217, 119, 6, 0.18)' }}>
               <span className="vn-chip vn-chip-amber">Tidak ditemukan</span>
               <h3 className="vn-headline text-[22px] mt-3 mb-2">
-                "{query}" belum ada di database demo.
+                "{query}" tidak ditemukan di {dbSize ? `${dbSize.toLocaleString('id-ID')}+` : ''} database OJK.
               </h3>
               <p className="text-[14px] text-[var(--vn-ink-soft)]">
-                Verifikasi langsung di{' '}
+                Belum tentu aman. Verifikasi langsung di{' '}
                 <a href="https://sikapiuangmu.ojk.go.id" className="underline text-[var(--vn-forest)]">sikapiuangmu.ojk.go.id</a>{' '}
                 atau hubungi <strong>OJK 157</strong>.
               </p>

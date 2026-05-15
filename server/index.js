@@ -119,7 +119,20 @@ app.get('/api/market/fx', async (_req, res) => {
   res.json(await getUsdIdr())
 })
 
-// ----- IDX ------------------------------------------------------------------
+// ----- OJK Investment Alert (11K+ illegal entities) -----------------------
+import { searchOJK, getOJKStats } from './data/ojk.js'
+
+app.get('/api/ojk/search', (req, res) => {
+  const q = req.query.q || ''
+  const limit = Math.min(Number(req.query.limit) || 20, 100)
+  const results = searchOJK(q, limit)
+  res.json({ query: q, count: results.length, results })
+})
+
+app.get('/api/ojk/stats', (_req, res) => {
+  res.json(getOJKStats())
+})
+
 // ----- Scam check ----------------------------------------------------------
 app.get('/api/scam/rekening', async (req, res) => {
   const { default: m } = await import('./lib/scamCheck.js')

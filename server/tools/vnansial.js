@@ -1,4 +1,4 @@
-import { OJK_LICENSED, RED_FLAGS } from '../data/ojk.js'
+import { searchOJK, getOJKStats, RED_FLAGS } from '../data/ojk.js'
 
 function calcLoan(principal, annualRate, months) {
   const r = annualRate / 100 / 12
@@ -15,26 +15,35 @@ function calcFlatLoan(principal, annualRate, months) {
 }
 
 export function checkInvestmentCompany({ companyName }) {
-  const q = String(companyName || '').trim().toLowerCase()
+  const q = String(companyName || '').trim()
   if (!q) return { error: 'Nama perusahaan wajib diisi' }
 
-  const match = OJK_LICENSED.get(q)
-  if (match) {
+  const matches = searchOJK(q, 10)
+  if (matches.length > 0) {
+    const top = matches[0]
     return {
       found: true,
-      company: match,
+      company: top,
+      totalMatches: matches.length,
+      matches: matches.slice(0, 5),
       advice:
-        match.status === 'TERDAFTAR'
-          ? 'Entitas terdaftar di database demo OJK. Tetap verifikasi langsung di situs resmi OJK.'
-          : 'PERINGATAN: Entitas ini terdaftar sebagai ilegal di database demo. Jangan transfer dana.',
+        top.status === 'TERDAFTAR'
+          ? 'Entitas terdaftar resmi di OJK. Tetap verifikasi langsung di situs resmi OJK.'
+          : `PERINGATAN: "${top.name}" terdaftar ILEGAL oleh OJK (${top.entityType} — ${top.activityType}). Jangan transfer dana.`,
     }
   }
   return {
     found: false,
     company: null,
+    totalMatches: 0,
+    matches: [],
     advice:
-      'Tidak ditemukan di database demo. Waspada — cek langsung di ojk.go.id atau SWI (Satgas Waspada Investasi). Jika ada ≥3 red flag, hindari investasi.',
+      'Tidak ditemukan di database OJK (11.000+ entitas ilegal). Belum tentu aman — cek langsung di ojk.go.id atau SWI (Satgas Waspada Investasi).',
   }
+}
+
+export function getOJKDatabaseStats() {
+  return getOJKStats()
 }
 
 export function calculateLoan({ principal, annualRatePercent, months, method = 'anuitas' }) {
